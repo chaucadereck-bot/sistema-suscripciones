@@ -1,0 +1,6 @@
+Flask
+pandas
+openpyxl
+python-dateutil
+psycopg2-binary
+gunicorn
