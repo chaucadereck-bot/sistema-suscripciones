@@ -214,6 +214,80 @@ def agregar():
 
     return render_template("agregar.html", codigo=generar_codigo())
 
+# ======================================
+# EDITAR
+# ======================================
+@app.route("/editar/<codigo>", methods=["GET", "POST"])
+def editar(codigo):
+    if not login_requerido():
+        return redirect("/login")
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    if request.method == "POST":
+        try:
+            cursor.execute("""
+                UPDATE ventas SET
+                    fecha=%s,
+                    duracion_meses=%s,
+                    fecha_vencimiento=%s,
+                    cliente=%s,
+                    telefono=%s,
+                    servicio=%s,
+                    precio=%s,
+                    correo_cuenta=%s,
+                    estado=%s
+                WHERE codigo_venta=%s
+            """, (
+                request.form["fecha"],
+                int(request.form["duracion_meses"]),
+                request.form["fecha_vencimiento"],
+                request.form["cliente"],
+                request.form["telefono"],
+                request.form["servicio"],
+                float(request.form["precio"]),
+                request.form["correo_cuenta"],
+                request.form["estado"],
+                codigo
+            ))
+
+            conexion.commit()
+
+        except Exception as e:
+            conexion.rollback()
+            return f"Error al actualizar: {e}"
+
+        finally:
+            conexion.close()
+
+        return redirect("/")
+
+    # GET → cargar datos para mostrar en el formulario
+    cursor.execute("""
+        SELECT 
+            codigo_venta,
+            fecha,
+            duracion_meses,
+            fecha_vencimiento,
+            cliente,
+            telefono,
+            servicio,
+            precio,
+            correo_cuenta,
+            estado
+        FROM ventas
+        WHERE codigo_venta=%s
+    """, (codigo,))
+
+    registro = cursor.fetchone()
+    conexion.close()
+
+    if not registro:
+        return "Registro no encontrado"
+
+    return render_template("editar.html", registro=registro)
+
 
 # ======================================
 # ELIMINAR
