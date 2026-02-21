@@ -20,7 +20,6 @@ def obtener_conexion():
     database_url = os.getenv("DATABASE_URL")
 
     if database_url:
-
         return psycopg2.connect(database_url)
     else:
         conexion = sqlite3.connect("database.db")
@@ -29,7 +28,7 @@ def obtener_conexion():
 
 
 # ======================================
-# CREAR TABLA SI NO EXISTE
+# CREAR TABLA SI NO EXISTEs
 # ======================================
 def crear_tabla():
     conexion = obtener_conexion()
