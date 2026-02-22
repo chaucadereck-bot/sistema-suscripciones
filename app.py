@@ -221,6 +221,11 @@ def debug_telegram():
     return response.text
 
 
+@app.route("/ver-token")
+def ver_token():
+    return os.getenv("TELEGRAM_TOKEN")
+
+
 # ======================================
 # INDEX
 # ======================================
