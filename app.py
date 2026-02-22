@@ -180,16 +180,6 @@ def revisar_vencimientos():
     conexion.close()
 
 
-def revisar_vencimientos_loop():
-    while True:
-        try:
-            revisar_vencimientos()
-        except Exception as e:
-            print("Error revisión automática:", e)
-
-        time.sleep(86400)
-
-
 # ======================================
 # ACTUALIZAR ESTADOS
 # ======================================
@@ -248,6 +238,18 @@ def debug_telegram():
     })
 
     return response.text
+
+
+# ======================================
+# RUTA CRON PARA ALERTAS
+# ======================================
+@app.route("/cron")
+def cron():
+    try:
+        revisar_vencimientos()
+        return "Cron ejecutado correctamente"
+    except Exception as e:
+        return f"Error en cron: {e}"
 
 
 # ======================================
@@ -465,13 +467,6 @@ def renovar(codigo):
 # INICIO
 # ======================================
 crear_tabla()
-
-# Iniciar hilo solo una vez
-if not os.getenv("WERKZEUG_RUN_MAIN"):
-    hilo = threading.Thread(target=revisar_vencimientos_loop)
-    hilo.daemon = True
-    hilo.start()
-
 
 if __name__ == "__main__":
     app.run(debug=True)
