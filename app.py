@@ -153,11 +153,14 @@ def logout():
 # TELEGRAM BOT
 # ======================================
 def enviar_telegram(mensaje):
-    token = os.environ.get("TELEGRAM_TOKEN")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    import os
+    import requests
 
-    if not token or not chat_id:
-        return
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    print("TOKEN:", token)
+    print("CHAT_ID:", chat_id)
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
@@ -166,7 +169,9 @@ def enviar_telegram(mensaje):
         "text": mensaje
     }
 
-    requests.post(url, data=data)
+    response = requests.post(url, data=data)
+
+    print("Respuesta Telegram:", response.text)     
 
 
 # ======================================
