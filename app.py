@@ -7,6 +7,11 @@ import psycopg2
 
 app = Flask(__name__)
 app.secret_key = "clave_super_secreta_2026"
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax"
+)
 
 ALERTA_DIAS = 3
 USUARIO = "Dereck Chauca"
