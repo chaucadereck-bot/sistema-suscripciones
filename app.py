@@ -4,6 +4,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import sqlite3
 import psycopg2
+import requests
 
 app = Flask(__name__)
 app.secret_key = "clave_super_secreta_2026"
@@ -146,6 +147,64 @@ def login():
 def logout():
     session.pop("usuario", None)
     return redirect("/login")
+
+
+# ======================================
+# TELEGRAM BOT
+# ======================================
+def enviar_telegram(mensaje):
+    token = os.environ.get("TELEGRAM_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        return
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+    data = {
+        "chat_id": chat_id,
+        "text": mensaje
+    }
+
+    requests.post(url, data=data)
+
+
+# ======================================
+# FUNCION DE REVISION
+# ======================================
+def revisar_vencimientos():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+    hoy = datetime.today().date()
+
+    cursor.execute("SELECT * FROM ventas")
+    datos = cursor.fetchall()
+
+    for d in datos:
+        fecha_v = datetime.strptime(str(d[3]), "%Y-%m-%d").date()
+        dias_restantes = (fecha_v - hoy).days
+
+        if dias_restantes in [3, 2, 1] or dias_restantes < 0:
+
+            if dias_restantes > 0:
+                estado_alerta = f"⚠️ Faltan {dias_restantes} días para vencer"
+            else:
+                estado_alerta = "❌ SERVICIO VENCIDO"
+
+            mensaje = f"""
+🚨 ALERTA DE SUSCRIPCIÓN
+
+Cliente: {d[4]}
+Servicio: {d[6]}
+Vence: {d[3]}
+Teléfono: {d[5]}
+
+{estado_alerta}
+"""
+
+            enviar_telegram(mensaje)
+
+    conexion.close()
 
 
 # ======================================
@@ -355,6 +414,14 @@ def renovar(codigo):
     conexion.close()
     return redirect("/")
 
+
+# ======================================
+# RUTA ESPECIAL PARA CRON
+# ======================================
+@app.route("/alertas")
+def ejecutar_alertas():
+    revisar_vencimientos()
+    return "Alertas ejecutadas correctamente"
 
 # ======================================
 # INICIO APP
