@@ -418,10 +418,10 @@ def renovar(codigo):
 # ======================================
 # RUTA ESPECIAL PARA CRON
 # ======================================
-@app.route("/alertas")
-def ejecutar_alertas():
-    revisar_vencimientos()
-    return "Alertas ejecutadas correctamente"
+@app.route("/test-telegram")
+def test_telegram():
+    enviar_telegram("🚀 Prueba directa desde Railway")
+    return "Mensaje enviado"
 
 # ======================================
 # INICIO APP
