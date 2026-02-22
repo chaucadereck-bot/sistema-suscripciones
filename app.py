@@ -187,7 +187,7 @@ def revisar_vencimientos_loop():
         except Exception as e:
             print("Error revisión automática:", e)
 
-        time.sleep(60)
+        time.sleep(86400)
 
 
 # ======================================
