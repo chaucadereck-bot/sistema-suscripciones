@@ -201,6 +201,27 @@ def login():
 
 
 # ======================================
+# DEBUG TELEGRAM
+# ======================================
+@app.route("/debug-telegram")
+def debug_telegram():
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        return "Token o Chat ID no configurados"
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+    response = requests.post(url, json={
+        "chat_id": chat_id,
+        "text": "🚀 Prueba directa Railway"
+    })
+
+    return response.text
+
+
+# ======================================
 # INDEX
 # ======================================
 @app.route("/")
