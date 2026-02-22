@@ -216,7 +216,23 @@ def index():
     datos = cursor.fetchall()
     conexion.close()
 
-    return render_template("index.html", datos=datos)
+    hoy = datetime.today().date()
+    datos_con_alerta = []
+
+    for d in datos:
+        fecha_v = datetime.strptime(str(d[3]), "%Y-%m-%d").date()
+        dias_restantes = (fecha_v - hoy).days
+
+        if d[9] == "vencido":
+            alerta = "vencido"
+        elif 0 <= dias_restantes <= ALERTA_DIAS:
+            alerta = "por_vencer"
+        else:
+            alerta = "activo"
+
+        datos_con_alerta.append((d, alerta))
+
+    return render_template("index.html", datos=datos_con_alerta)
 
 
 # ======================================
