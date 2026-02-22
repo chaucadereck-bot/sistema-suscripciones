@@ -212,22 +212,10 @@ def login():
 # ======================================
 @app.route("/debug-telegram")
 def debug_telegram():
-    token = os.getenv("TELEGRAM_TOKEN").strip()
-    chat_id = os.getenv("TELEGRAM_CHAT_ID").strip()
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-
-    response = requests.post(url, data={
-        "chat_id": chat_id,
-        "text": "🚀 TEST STRIP"
-    })
-
-    return response.text
-
-
-@app.route("/ver-token")
-def ver_token():
-    return os.getenv("TELEGRAM_TOKEN")
+    return f"TOKEN: {token} | CHAT_ID: {chat_id}"
 
 
 # ======================================
