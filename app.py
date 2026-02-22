@@ -100,19 +100,26 @@ def enviar_telegram(mensaje):
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
     if not token or not chat_id:
-        print("Telegram no configurado")
+        print("Token o Chat ID no configurados")
         return
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     try:
-        requests.post(
+        response = requests.post(
             url,
-            json={"chat_id": chat_id, "text": mensaje},
+            data={
+                "chat_id": chat_id,
+                "text": mensaje
+            },
             timeout=10
         )
+
+        print("STATUS:", response.status_code)
+        print("RESPUESTA:", response.text)
+
     except Exception as e:
-        print("Error Telegram:", e)
+        print("Error enviando Telegram:", e)
 
 
 # ======================================
