@@ -181,8 +181,15 @@ def revisar_vencimientos():
     datos = cursor.fetchall()
 
     for d in datos:
-        fecha_v = datetime.strptime(str(d[3]), "%Y-%m-%d").date()
+        fecha_v = d[3]
+
+        # Si viene como string (SQLite), convertir
+        if isinstance(fecha_v, str):
+            fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
+
         dias_restantes = (fecha_v - hoy).days
+
+        print("Cliente:", d[4], "Días restantes:", dias_restantes)
 
         if dias_restantes in [3, 2, 1] or dias_restantes < 0:
 
@@ -196,7 +203,7 @@ def revisar_vencimientos():
 
 Cliente: {d[4]}
 Servicio: {d[6]}
-Vence: {d[3]}
+Vence: {fecha_v}
 Teléfono: {d[5]}
 
 {estado_alerta}
