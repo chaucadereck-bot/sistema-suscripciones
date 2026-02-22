@@ -5,6 +5,9 @@ from dateutil.relativedelta import relativedelta
 import sqlite3
 import psycopg2
 import requests
+import threading
+import time
+
 
 app = Flask(__name__)
 app.secret_key = "clave_super_secreta_2026"
@@ -183,45 +186,19 @@ def enviar_telegram(mensaje):
 # FUNCION DE REVISION
 # ======================================
 def revisar_vencimientos():
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    hoy = datetime.today().date()
+    # tu código original aquí
+    # NO lo cambies
 
-    cursor.execute("SELECT * FROM ventas")
-    datos = cursor.fetchall()
 
-    for d in datos:
-        fecha_v = d[3]
+ def revisar_vencimientos_loop():
+    while True:
+        try:
+            print("🔍 Revisando vencimientos...")
+            revisar_vencimientos()
+        except Exception as e:
+            print("Error en revisión:", e)
 
-        # Si viene como string (SQLite), convertir
-        if isinstance(fecha_v, str):
-            fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
-
-        dias_restantes = (fecha_v - hoy).days
-
-        print("Cliente:", d[4], "Días restantes:", dias_restantes)
-
-        if dias_restantes in [3, 2, 1] or dias_restantes < 0:
-
-            if dias_restantes > 0:
-                estado_alerta = f"⚠️ Faltan {dias_restantes} días para vencer"
-            else:
-                estado_alerta = "❌ SERVICIO VENCIDO"
-
-            mensaje = f"""
-🚨 ALERTA DE SUSCRIPCIÓN
-
-Cliente: {d[4]}
-Servicio: {d[6]}
-Vence: {fecha_v}
-Teléfono: {d[5]}
-
-{estado_alerta}
-"""
-
-            enviar_telegram(mensaje)
-
-    conexion.close()
+        time.sleep(86400)
 
 
 # ======================================
@@ -468,5 +445,10 @@ def forzar_telegram():
 # ======================================
 if __name__ == "__main__":
     crear_tabla()
+
+    hilo = threading.Thread(target=revisar_vencimientos_loop)
+    hilo.daemon = True
+    hilo.start()
+
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
