@@ -443,12 +443,10 @@ def forzar_telegram():
 # ======================================
 # INICIO APP
 # ======================================
-if __name__ == "__main__":
-    crear_tabla()
+crear_tabla()
 
-    hilo = threading.Thread(target=revisar_vencimientos_loop)
-    hilo.daemon = True
-    hilo.start()
+# Iniciar revisión automática SIEMPRE (funciona con Gunicorn)
 
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+hilo = threading.Thread(target=revisar_vencimientos_loop)
+hilo.daemon = True
+hilo.start()
