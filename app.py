@@ -452,6 +452,12 @@ def debug_telegram():
 
     return response.text
 
+
+@app.route("/ejecutar-alertas")
+def ejecutar_alertas():
+    revisar_vencimientos()
+    return "Alertas ejecutadas correctamente"
+
 # ======================================
 # INICIO APP
 # ======================================
