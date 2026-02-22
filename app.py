@@ -130,8 +130,8 @@ def actualizar_estados():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        usuario = request.form["usuario"]
-        password = request.form["password"]
+        usuario = request.form.get("usuario", "").strip()
+        password = request.form.get("password", "").strip()
 
         if usuario == USUARIO and password == PASSWORD:
             session["usuario"] = usuario
