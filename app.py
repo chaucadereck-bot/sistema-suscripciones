@@ -10,9 +10,9 @@ import time
 
 
 app = Flask(__name__)
-app.secret_key = "clave_super_secreta_2026"
+app.secret_key = "clave_super_secreta_2026" 
 app.config.update(
-    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SECURE=bool(os.getenv("DATABASE_URL")),
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax"
 )
@@ -31,39 +31,33 @@ def obtener_conexion():
     if database_url:
         return psycopg2.connect(database_url)
     else:
-        conexion = sqlite3.connect("database.db")
-        conexion.row_factory = sqlite3.Row
-        return conexion
+        return sqlite3.connect("database.db")
 
 
 # ======================================
-# CREAR TABLA SI NO EXISTEs
+# CREAR TABLA
 # ======================================
 def crear_tabla():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS ventas (
-        codigo_venta VARCHAR(50) PRIMARY KEY,
-        fecha DATE,
-        duracion_meses INTEGER,
-        fecha_vencimiento DATE,
-        cliente VARCHAR(100),
-        telefono VARCHAR(50),
-        servicio VARCHAR(100),
-        precio NUMERIC,
-        correo_cuenta VARCHAR(100),
-        estado VARCHAR(50)
-    )
+        CREATE TABLE IF NOT EXISTS ventas (
+            codigo_venta VARCHAR(50) PRIMARY KEY,
+            fecha DATE,
+            duracion_meses INTEGER,
+            fecha_vencimiento DATE,
+            cliente VARCHAR(100),
+            telefono VARCHAR(50),
+            servicio VARCHAR(100),
+            precio NUMERIC,
+            correo_cuenta VARCHAR(100),
+            estado VARCHAR(50)
+        );
     """)
 
     conexion.commit()
     conexion.close()
-
-
-def login_requerido():
-    return "usuario" in session
 
 
 # ======================================
@@ -99,6 +93,72 @@ def generar_codigo():
 
 
 # ======================================
+# TELEGRAM
+# ======================================
+def enviar_telegram(mensaje):
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        print("Telegram no configurado")
+        return
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+    try:
+        requests.post(
+            url,
+            json={"chat_id": chat_id, "text": mensaje},
+            timeout=10
+        )
+    except Exception as e:
+        print("Error Telegram:", e)
+
+
+# ======================================
+# REVISIÓN AUTOMÁTICA
+# ======================================
+def revisar_vencimientos():
+    print("🔍 Revisando vencimientos...")
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+    cursor.execute("SELECT codigo_venta, cliente, servicio, fecha_vencimiento, estado FROM ventas")
+    registros = cursor.fetchall()
+    conexion.close()
+
+    hoy = datetime.today().date()
+
+    for r in registros:
+        codigo = r[0]
+        cliente = r[1]
+        servicio = r[2]
+        fecha_v = datetime.strptime(str(r[3]), "%Y-%m-%d").date()
+        estado = r[4]
+
+        dias_restantes = (fecha_v - hoy).days
+
+        if estado == "vencido":
+            continue
+
+        if dias_restantes in [3, 2, 1]:
+            enviar_telegram(f"⚠️ {cliente} - {servicio} vence en {dias_restantes} día(s).")
+
+        if dias_restantes < 0:
+            enviar_telegram(f"❌ {cliente} - {servicio} está VENCIDO.")
+
+
+def revisar_vencimientos_loop():
+    while True:
+        try:
+            revisar_vencimientos()
+        except Exception as e:
+            print("Error revisión automática:", e)
+
+        time.sleep(86400)
+
+
+# ======================================
 # ACTUALIZAR ESTADOS
 # ======================================
 def actualizar_estados():
@@ -114,15 +174,9 @@ def actualizar_estados():
         nuevo_estado = "vencido" if hoy > fecha_v else "activo"
 
         if os.getenv("DATABASE_URL"):
-            cursor.execute(
-                "UPDATE ventas SET estado=%s WHERE codigo_venta=%s",
-                (nuevo_estado, codigo)
-            )
+            cursor.execute("UPDATE ventas SET estado=%s WHERE codigo_venta=%s", (nuevo_estado, codigo))
         else:
-            cursor.execute(
-                "UPDATE ventas SET estado=? WHERE codigo_venta=?",
-                (nuevo_estado, codigo)
-            )
+            cursor.execute("UPDATE ventas SET estado=? WHERE codigo_venta=?", (nuevo_estado, codigo))
 
     conexion.commit()
     conexion.close()
@@ -140,65 +194,10 @@ def login():
         if usuario == USUARIO and password == PASSWORD:
             session["usuario"] = usuario
             return redirect("/")
-        else:
-            return "Credenciales incorrectas"
+
+        return "Credenciales incorrectas"
 
     return render_template("login.html")
-
-
-@app.route("/logout")
-def logout():
-    session.pop("usuario", None)
-    return redirect("/login")
-
-
-# ======================================
-# TELEGRAM BOT
-# ======================================
-def enviar_telegram(mensaje):
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-
-    if not token or not chat_id:
-        print("ERROR: Token o Chat ID no encontrados")
-        return
-
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-
-    try:
-        response = requests.post(
-            url,
-            json={
-                "chat_id": chat_id,
-                "text": mensaje
-            },
-            timeout=10
-        )
-
-        print("Código respuesta:", response.status_code)
-        print("Respuesta Telegram:", response.text)
-
-    except Exception as e:
-        print("Error enviando Telegram:", str(e))  
-
-
-# ======================================
-# FUNCION DE REVISION
-# ======================================
-def revisar_vencimientos():
-    # tu código original aquí
-    # NO lo cambies
-
-
- def revisar_vencimientos_loop():
-    while True:
-        try:
-            print("🔍 Revisando vencimientos...")
-            revisar_vencimientos()
-        except Exception as e:
-            print("Error en revisión:", e)
-
-        time.sleep(86400)
 
 
 # ======================================
@@ -206,7 +205,7 @@ def revisar_vencimientos():
 # ======================================
 @app.route("/")
 def index():
-    if not login_requerido():
+    if "usuario" not in session:
         return redirect("/login")
 
     actualizar_estados()
@@ -217,23 +216,7 @@ def index():
     datos = cursor.fetchall()
     conexion.close()
 
-    hoy = datetime.today().date()
-    datos_con_alerta = []
-
-    for d in datos:
-        fecha_v = datetime.strptime(str(d[3]), "%Y-%m-%d").date()
-        dias_restantes = (fecha_v - hoy).days
-
-        if d[9] == "vencido":
-            alerta = "vencido"
-        elif 0 <= dias_restantes <= ALERTA_DIAS:
-            alerta = "por_vencer"
-        else:
-            alerta = "activo"
-
-        datos_con_alerta.append((d, alerta))
-
-    return render_template("index.html", datos=datos_con_alerta)
+    return render_template("index.html", datos=datos)
 
 
 # ======================================
@@ -241,7 +224,7 @@ def index():
 # ======================================
 @app.route("/agregar", methods=["GET", "POST"])
 def agregar():
-    if not login_requerido():
+    if "usuario" not in session:
         return redirect("/login")
 
     if request.method == "POST":
@@ -272,19 +255,20 @@ def agregar():
 
     return render_template("agregar.html", codigo=generar_codigo())
 
+
 # ======================================
 # EDITAR
 # ======================================
 @app.route("/editar/<codigo>", methods=["GET", "POST"])
 def editar(codigo):
-    if not login_requerido():
+    if "usuario" not in session:
         return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
     if request.method == "POST":
-        try:
+        if os.getenv("DATABASE_URL"):
             cursor.execute("""
                 UPDATE ventas SET
                     fecha=%s,
@@ -309,34 +293,40 @@ def editar(codigo):
                 request.form["estado"],
                 codigo
             ))
+        else:
+            cursor.execute("""
+                UPDATE ventas SET
+                    fecha=?,
+                    duracion_meses=?,
+                    fecha_vencimiento=?,
+                    cliente=?,
+                    telefono=?,
+                    servicio=?,
+                    precio=?,
+                    correo_cuenta=?,
+                    estado=?
+                WHERE codigo_venta=?
+            """, (
+                request.form["fecha"],
+                int(request.form["duracion_meses"]),
+                request.form["fecha_vencimiento"],
+                request.form["cliente"],
+                request.form["telefono"],
+                request.form["servicio"],
+                float(request.form["precio"]),
+                request.form["correo_cuenta"],
+                request.form["estado"],
+                codigo
+            ))
 
-            conexion.commit()
-
-        except Exception as e:
-            conexion.rollback()
-            return f"Error al actualizar: {e}"
-
-        finally:
-            conexion.close()
-
+        conexion.commit()
+        conexion.close()
         return redirect("/")
 
-    # GET → cargar datos para mostrar en el formulario
-    cursor.execute("""
-        SELECT 
-            codigo_venta,
-            fecha,
-            duracion_meses,
-            fecha_vencimiento,
-            cliente,
-            telefono,
-            servicio,
-            precio,
-            correo_cuenta,
-            estado
-        FROM ventas
-        WHERE codigo_venta=%s
-    """, (codigo,))
+    if os.getenv("DATABASE_URL"):
+        cursor.execute("SELECT * FROM ventas WHERE codigo_venta=%s", (codigo,))
+    else:
+        cursor.execute("SELECT * FROM ventas WHERE codigo_venta=?", (codigo,))
 
     registro = cursor.fetchone()
     conexion.close()
@@ -352,7 +342,7 @@ def editar(codigo):
 # ======================================
 @app.route("/eliminar/<codigo>")
 def eliminar(codigo):
-    if not login_requerido():
+    if "usuario" not in session:
         return redirect("/login")
 
     conexion = obtener_conexion()
@@ -373,7 +363,7 @@ def eliminar(codigo):
 # ======================================
 @app.route("/renovar/<codigo>")
 def renovar(codigo):
-    if not login_requerido():
+    if "usuario" not in session:
         return redirect("/login")
 
     conexion = obtener_conexion()
@@ -394,15 +384,11 @@ def renovar(codigo):
     nueva_fecha = datetime.strptime(str(fecha_v), "%Y-%m-%d") + relativedelta(months=int(meses))
 
     if os.getenv("DATABASE_URL"):
-        cursor.execute(
-            "UPDATE ventas SET fecha_vencimiento=%s, estado=%s WHERE codigo_venta=%s",
-            (nueva_fecha.strftime("%Y-%m-%d"), "activo", codigo)
-        )
+        cursor.execute("UPDATE ventas SET fecha_vencimiento=%s, estado=%s WHERE codigo_venta=%s",
+                       (nueva_fecha.strftime("%Y-%m-%d"), "activo", codigo))
     else:
-        cursor.execute(
-            "UPDATE ventas SET fecha_vencimiento=?, estado=? WHERE codigo_venta=?",
-            (nueva_fecha.strftime("%Y-%m-%d"), "activo", codigo)
-        )
+        cursor.execute("UPDATE ventas SET fecha_vencimiento=?, estado=? WHERE codigo_venta=?",
+                       (nueva_fecha.strftime("%Y-%m-%d"), "activo", codigo))
 
     conexion.commit()
     conexion.close()
@@ -410,43 +396,16 @@ def renovar(codigo):
 
 
 # ======================================
-# RUTA ESPECIAL PARA CRON
-# ======================================
-@app.route("/debug-telegram")
-def debug_telegram():
-    import os
-    import requests
-
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-
-    print("TOKEN:", token)
-    print("CHAT_ID:", chat_id)
-
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-
-    response = requests.post(url, data={
-        "chat_id": chat_id,
-        "text": "🚀 Prueba directa Railway"
-    })
-
-    print("Respuesta:", response.text)
-
-    return response.text
-
-
-@app.route("/forzar-telegram")
-def forzar_telegram():
-    enviar_telegram("🚀 MENSAJE FORZADO DESDE RAILWAY")
-    return "Intento de envío realizado"
-
-# ======================================
-# INICIO APP
+# INICIO
 # ======================================
 crear_tabla()
 
-# Iniciar revisión automática SIEMPRE (funciona con Gunicorn)
+# Iniciar hilo solo una vez
+if not os.getenv("WERKZEUG_RUN_MAIN"):
+    hilo = threading.Thread(target=revisar_vencimientos_loop)
+    hilo.daemon = True
+    hilo.start()
 
-hilo = threading.Thread(target=revisar_vencimientos_loop)
-hilo.daemon = True
-hilo.start()
+
+if __name__ == "__main__":
+    app.run(debug=True)
