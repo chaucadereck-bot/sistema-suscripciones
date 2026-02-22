@@ -430,10 +430,27 @@ def renovar(codigo):
 # ======================================
 # RUTA ESPECIAL PARA CRON
 # ======================================
-@app.route("/alertas")
-def ejecutar_alertas():
-    revisar_vencimientos()
-    return "Alertas ejecutadas" 
+@app.route("/debug-telegram")
+def debug_telegram():
+    import os
+    import requests
+
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    print("TOKEN:", token)
+    print("CHAT_ID:", chat_id)
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+    response = requests.post(url, data={
+        "chat_id": chat_id,
+        "text": "🚀 Prueba directa Railway"
+    })
+
+    print("Respuesta:", response.text)
+
+    return response.text
 
 # ======================================
 # INICIO APP
