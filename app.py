@@ -153,25 +153,30 @@ def logout():
 # TELEGRAM BOT
 # ======================================
 def enviar_telegram(mensaje):
-    import os
-    import requests
-
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
-    print("TOKEN:", token)
-    print("CHAT_ID:", chat_id)
+    if not token or not chat_id:
+        print("ERROR: Token o Chat ID no encontrados")
+        return
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-    data = {
-        "chat_id": chat_id,
-        "text": mensaje
-    }
+    try:
+        response = requests.post(
+            url,
+            json={
+                "chat_id": chat_id,
+                "text": mensaje
+            },
+            timeout=10
+        )
 
-    response = requests.post(url, data=data)
+        print("Código respuesta:", response.status_code)
+        print("Respuesta Telegram:", response.text)
 
-    print("Respuesta Telegram:", response.text)     
+    except Exception as e:
+        print("Error enviando Telegram:", str(e))  
 
 
 # ======================================
@@ -453,10 +458,10 @@ def debug_telegram():
     return response.text
 
 
-@app.route("/ejecutar-alertas")
-def ejecutar_alertas():
-    revisar_vencimientos()
-    return "Alertas ejecutadas correctamente"
+@app.route("/forzar-telegram")
+def forzar_telegram():
+    enviar_telegram("🚀 MENSAJE FORZADO DESDE RAILWAY")
+    return "Intento de envío realizado"
 
 # ======================================
 # INICIO APP
