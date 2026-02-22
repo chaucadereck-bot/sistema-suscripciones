@@ -131,7 +131,7 @@ def revisar_vencimientos():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute("SELECT codigo_venta, cliente, servicio, fecha_vencimiento, estado FROM ventas")
+    cursor.execute("SELECT codigo_venta, cliente, servicio, duracion_meses, telefono, fecha_vencimiento, estado FROM ventas")
     registros = cursor.fetchall()
 
     hoy = datetime.today().date()
@@ -140,41 +140,55 @@ def revisar_vencimientos():
         codigo = r[0]
         cliente = r[1]
         servicio = r[2]
-        fecha_v = datetime.strptime(str(r[3]), "%Y-%m-%d").date()
-        estado = r[4]
+        duracion = r[3]
+        telefono = r[4]
+        fecha_v = datetime.strptime(str(r[5]), "%Y-%m-%d").date()
+        estado = r[6]
 
         dias_restantes = (fecha_v - hoy).days
 
-        # 🔔 ALERTAS ANTES DE VENCER
-        if 0 < dias_restantes <= 3:
-            enviar_telegram(
-                f"⚠️ {cliente} - {servicio} vence en {dias_restantes} día(s)."
-            )
+        # ================================
+        # ALERTA 3,2,1 DIAS (SOLO UNA VEZ)
+        # ================================
+        if dias_restantes in [3, 2, 1] and estado == "activo":
 
-        # 📅 VENCE HOY
-        elif dias_restantes == 0:
-            enviar_telegram(
-                f"⚠️ {cliente} - {servicio} vence HOY."
-            )
+            mensaje = f"""
+Cliente: {cliente}
+Servicio: {servicio}
+Duración: {duracion} mes(es)
+Teléfono: {telefono}
+Vence en: {dias_restantes} día(s)
+Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
+"""
 
-        # ❌ VENCIDO (SOLO UNA VEZ)
-        elif dias_restantes < 0 and estado != "vencido":
+            enviar_telegram(mensaje.strip())
 
-            enviar_telegram(
-                f"❌ {cliente} - {servicio} está VENCIDO."
-            )
-
-            # Actualizamos estado para que no vuelva a enviar
+            # Cambiamos estado para que no repita
             if os.getenv("DATABASE_URL"):
-                cursor.execute(
-                    "UPDATE ventas SET estado=%s WHERE codigo_venta=%s",
-                    ("vencido", codigo)
-                )
+                cursor.execute("UPDATE ventas SET estado=%s WHERE codigo_venta=%s", ("notificado", codigo))
             else:
-                cursor.execute(
-                    "UPDATE ventas SET estado=? WHERE codigo_venta=?",
-                    ("vencido", codigo)
-                )
+                cursor.execute("UPDATE ventas SET estado=? WHERE codigo_venta=?", ("notificado", codigo))
+
+        # ================================
+        # VENCIDO (SOLO UNA VEZ)
+        # ================================
+        if dias_restantes < 0 and estado != "vencido":
+
+            mensaje = f"""
+Cliente: {cliente}
+Servicio: {servicio}
+Duración: {duracion} mes(es)
+Teléfono: {telefono}
+ESTADO: VENCIDO
+Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
+"""
+
+            enviar_telegram(mensaje.strip())
+
+            if os.getenv("DATABASE_URL"):
+                cursor.execute("UPDATE ventas SET estado=%s WHERE codigo_venta=%s", ("vencido", codigo))
+            else:
+                cursor.execute("UPDATE ventas SET estado=? WHERE codigo_venta=?", ("vencido", codigo))
 
     conexion.commit()
     conexion.close()
