@@ -111,6 +111,90 @@ def crear_tablas_contables():
 
 
 # ======================================
+# INSERTAR SERVICIOS BASE (SI NO EXISTEN)
+# ======================================
+def insertar_servicios_base():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    servicios_base = [
+        ("SERV-001", "Adobe 1 año", 97, 50, 12),
+        ("SERV-002", "Adobe 6 meses", 52, 30, 6),
+        ("SERV-004", "Adobe 1 mes", 10, 5, 1),
+        ("SERV-005", "Office 12 meses", 25, 6, 12),
+        ("SERV-006", "Capcut 1 año", 65, 40, 12),
+        ("SERV-007", "Capcut 1 mes", 7, 3, 1),
+        ("SERV-008", "Canva 1 año", 30, 1, 12),
+        ("SERV-009", "Autodesk 1 año", 35, 15, 12),
+    ]
+
+    for s in servicios_base:
+        try:
+            if os.getenv("DATABASE_URL"):
+                cursor.execute("""
+                    INSERT INTO servicios 
+                    (id_servicio, nombre_servicio, precio_base, costo_base, duracion_meses)
+                    VALUES (%s,%s,%s,%s,%s)
+                    ON CONFLICT (id_servicio) DO NOTHING;
+                """, s)
+            else:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO servicios 
+                    VALUES (?,?,?,?,?)
+                """, s)
+        except:
+            pass
+
+    conexion.commit()
+    conexion.close()
+
+
+# ======================================
+# MIGRAR SERVICIOS ANTIGUOS A SERV-XXX
+# ======================================
+def migrar_servicios_antiguos():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    cursor.execute("SELECT codigo_venta, servicio, duracion_meses FROM ventas")
+    registros = cursor.fetchall()
+
+    for codigo, servicio, duracion in registros:
+
+        nuevo_servicio = None
+
+        servicio = servicio.lower().strip()
+
+        if servicio == "adobe" and duracion == 12:
+            nuevo_servicio = "SERV-001"
+        elif servicio == "adobe" and duracion == 6:
+            nuevo_servicio = "SERV-002"
+        elif servicio == "adobe" and duracion == 1:
+            nuevo_servicio = "SERV-004"
+        elif servicio == "office":
+            nuevo_servicio = "SERV-005"
+        elif servicio == "capcut" and duracion == 12:
+            nuevo_servicio = "SERV-006"
+        elif servicio == "capcut" and duracion == 1:
+            nuevo_servicio = "SERV-007"
+        elif servicio == "canva":
+            nuevo_servicio = "SERV-008"
+        elif servicio == "autodesk":
+            nuevo_servicio = "SERV-009"
+
+        if nuevo_servicio:
+            if os.getenv("DATABASE_URL"):
+                cursor.execute("UPDATE ventas SET servicio=%s WHERE codigo_venta=%s",
+                               (nuevo_servicio, codigo))
+            else:
+                cursor.execute("UPDATE ventas SET servicio=? WHERE codigo_venta=?",
+                               (nuevo_servicio, codigo))
+
+    conexion.commit()
+    conexion.close()
+
+
+# ======================================
 # GENERAR CÓDIGO AUTOMÁTICO
 # ======================================
 def generar_codigo():
@@ -532,6 +616,7 @@ def renovar(codigo):
 # ======================================
 crear_tabla()
 crear_tablas_contables()
+insertar_servicios_base()
 
 if __name__ == "__main__":
     app.run(debug=True)
