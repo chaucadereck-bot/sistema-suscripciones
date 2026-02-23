@@ -11,13 +11,28 @@
 <h3>Editar Cliente</h3>
 
 <form method="POST">
+
 <input type="date" name="fecha" value="{{ registro[1] }}" class="form-control mb-2" required>
-<input name="duracion_meses" type="number" value="{{ registro[2] }}" class="form-control mb-2" required>
-<input type="date" name="fecha_vencimiento" value="{{ registro[3] }}" class="form-control mb-2" required>
+
 <input name="cliente" value="{{ registro[4] }}" class="form-control mb-2" required>
+
 <input name="telefono" value="{{ registro[5] }}" class="form-control mb-2" required>
-<input name="servicio" value="{{ registro[6] }}" class="form-control mb-2" required>
-<input name="precio" type="number" value="{{ registro[7] }}" class="form-control mb-2" required>
+
+<label>Servicio:</label>
+<select name="servicio" class="form-control mb-2" required>
+    {% for s in servicios %}
+        <option value="{{ s[0] }}"
+            {% if registro[6] == s[0] %}selected{% endif %}>
+            {{ s[1] }}
+        </option>
+    {% endfor %}
+</select>
+
+<!-- Campos automáticos ocultos -->
+<input name="duracion_meses" type="hidden">
+<input name="precio" type="hidden">
+<input name="fecha_vencimiento" type="hidden">
+
 <input name="correo_cuenta" type="email" value="{{ registro[8] }}" class="form-control mb-2" required>
 
 <select name="estado" class="form-control mb-2">
@@ -28,6 +43,7 @@
 
 <button class="btn btn-primary">Actualizar</button>
 <a href="/" class="btn btn-secondary">Volver</a>
+
 </form>
 
 </div>

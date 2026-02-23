@@ -436,44 +436,75 @@ def index():
 
 
 # ======================================
-# AGREGAR
+# AGREGAR (Automatizado)
 # ======================================
 @app.route("/agregar", methods=["GET", "POST"])
 def agregar():
     if "usuario" not in session:
         return redirect("/login")
 
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
+    servicios = cursor.fetchall()
+
     if request.method == "POST":
+
+        id_servicio = request.form["servicio"]
+
+        # Buscar precio y duración del servicio
+        if os.getenv("DATABASE_URL"):
+            cursor.execute("SELECT precio_base, duracion_meses FROM servicios WHERE id_servicio=%s", (id_servicio,))
+        else:
+            cursor.execute("SELECT precio_base, duracion_meses FROM servicios WHERE id_servicio=?", (id_servicio,))
+
+        servicio_data = cursor.fetchone()
+
+        if not servicio_data:
+            return "Servicio no encontrado"
+
+        precio_base = float(servicio_data[0])
+        duracion = int(servicio_data[1])
+
+        fecha_inicio = datetime.strptime(request.form["fecha"], "%Y-%m-%d")
+        fecha_vencimiento = fecha_inicio + relativedelta(months=duracion)
+
         datos = (
             request.form["codigo_venta"],
             request.form["fecha"],
-            request.form["duracion_meses"],
-            request.form["fecha_vencimiento"],
+            duracion,  # automático
+            fecha_vencimiento.strftime("%Y-%m-%d"),  # automático
             request.form["cliente"],
             request.form["telefono"],
-            request.form["servicio"],
-            request.form["precio"],
+            id_servicio,
+            precio_base,  # automático
             request.form["correo_cuenta"],
-            request.form["estado"],
+            "activo",
         )
 
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-
         if os.getenv("DATABASE_URL"):
-            cursor.execute("INSERT INTO ventas VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", datos)
+            cursor.execute(
+                "INSERT INTO ventas VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                datos
+            )
         else:
-            cursor.execute("INSERT INTO ventas VALUES (?,?,?,?,?,?,?,?,?,?)", datos)
+            cursor.execute(
+                "INSERT INTO ventas VALUES (?,?,?,?,?,?,?,?,?,?)",
+                datos
+            )
 
         conexion.commit()
         conexion.close()
         return redirect("/")
 
-    return render_template("agregar.html", codigo=generar_codigo())
+    conexion.close()
+    return render_template("agregar.html", codigo=generar_codigo(), servicios=servicios)
+
 
 
 # ======================================
-# EDITAR
+# EDITAR (PRECIO Y DURACIÓN AUTOMÁTICOS)
 # ======================================
 @app.route("/editar/<codigo>", methods=["GET", "POST"])
 def editar(codigo):
@@ -483,7 +514,29 @@ def editar(codigo):
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
+    cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
+    servicios = cursor.fetchall()
+
     if request.method == "POST":
+
+        id_servicio = request.form["servicio"]
+
+        if os.getenv("DATABASE_URL"):
+            cursor.execute("SELECT precio_base, duracion_meses FROM servicios WHERE id_servicio=%s", (id_servicio,))
+        else:
+            cursor.execute("SELECT precio_base, duracion_meses FROM servicios WHERE id_servicio=?", (id_servicio,))
+
+        servicio_data = cursor.fetchone()
+
+        if not servicio_data:
+            return "Servicio no encontrado"
+
+        precio_base = float(servicio_data[0])
+        duracion = int(servicio_data[1])
+
+        fecha_inicio = datetime.strptime(request.form["fecha"], "%Y-%m-%d")
+        fecha_vencimiento = fecha_inicio + relativedelta(months=duracion)
+
         if os.getenv("DATABASE_URL"):
             cursor.execute("""
                 UPDATE ventas SET
@@ -499,14 +552,14 @@ def editar(codigo):
                 WHERE codigo_venta=%s
             """, (
                 request.form["fecha"],
-                int(request.form["duracion_meses"]),
-                request.form["fecha_vencimiento"],
+                duracion,
+                fecha_vencimiento.strftime("%Y-%m-%d"),
                 request.form["cliente"],
                 request.form["telefono"],
-                request.form["servicio"],
-                float(request.form["precio"]),
+                id_servicio,
+                precio_base,
                 request.form["correo_cuenta"],
-                request.form["estado"],
+                "activo",
                 codigo
             ))
         else:
@@ -524,14 +577,14 @@ def editar(codigo):
                 WHERE codigo_venta=?
             """, (
                 request.form["fecha"],
-                int(request.form["duracion_meses"]),
-                request.form["fecha_vencimiento"],
+                duracion,
+                fecha_vencimiento.strftime("%Y-%m-%d"),
                 request.form["cliente"],
                 request.form["telefono"],
-                request.form["servicio"],
-                float(request.form["precio"]),
+                id_servicio,
+                precio_base,
                 request.form["correo_cuenta"],
-                request.form["estado"],
+                "activo",
                 codigo
             ))
 
@@ -547,10 +600,7 @@ def editar(codigo):
     registro = cursor.fetchone()
     conexion.close()
 
-    if not registro:
-        return "Registro no encontrado"
-
-    return render_template("editar.html", registro=registro)
+    return render_template("editar.html", registro=registro, servicios=servicios)
 
 
 # ======================================

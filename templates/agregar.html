@@ -11,15 +11,38 @@
 <h3>Agregar Cliente</h3>
 
 <form method="POST">
+
+<!-- Código automático -->
 <input name="codigo_venta" class="form-control mb-2" value="{{ codigo }}" readonly>
+
+<!-- Fecha inicio -->
+<label>Fecha Inicio:</label>
 <input type="date" name="fecha" class="form-control mb-2" required>
-<input name="duracion_meses" type="number" class="form-control mb-2" placeholder="Duración Meses" required>
-<input type="date" name="fecha_vencimiento" class="form-control mb-2" required>
+
+<!-- Cliente -->
 <input name="cliente" class="form-control mb-2" placeholder="Cliente" required>
+
+<!-- Teléfono -->
 <input name="telefono" class="form-control mb-2" placeholder="Teléfono" required>
-<input name="servicio" class="form-control mb-2" placeholder="Servicio" required>
-<input name="precio" type="number" class="form-control mb-2" placeholder="Precio" required>
+
+<!-- Servicio -->
+<label>Servicio:</label>
+<select name="servicio" class="form-control mb-2" required>
+    <option value="">Seleccione un servicio</option>
+    {% for s in servicios %}
+        <option value="{{ s[0] }}">{{ s[1] }}</option>
+    {% endfor %}
+</select>
+
+<!-- Estos campos serán sobrescritos automáticamente -->
+<input name="duracion_meses" type="hidden">
+<input name="precio" type="hidden">
+<input name="fecha_vencimiento" type="hidden">
+
+<!-- Correo -->
 <input name="correo_cuenta" type="email" class="form-control mb-2" placeholder="Correo Cuenta" required>
+
+<!-- Estado -->
 <select name="estado" class="form-control mb-2">
 <option value="activo">Activo</option>
 <option value="inactivo">Inactivo</option>
@@ -28,6 +51,7 @@
 
 <button class="btn btn-success">Guardar</button>
 <a href="/" class="btn btn-secondary">Volver</a>
+
 </form>
 
 </div>
