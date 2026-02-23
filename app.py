@@ -617,7 +617,7 @@ def renovar(codigo):
 crear_tabla()
 crear_tablas_contables()
 insertar_servicios_base()
-migrar_servicios_antiguos()
+
 
 if __name__ == "__main__":
     app.run(debug=True)
