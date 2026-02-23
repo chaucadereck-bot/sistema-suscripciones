@@ -61,6 +61,56 @@ def crear_tabla():
 
 
 # ======================================
+# CREAR TABLAS CONTABLES
+# ======================================
+def crear_tablas_contables():
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    # TABLA SERVICIOS
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS servicios (
+            id_servicio VARCHAR(20) PRIMARY KEY,
+            nombre_servicio VARCHAR(100) NOT NULL,
+            precio_base NUMERIC NOT NULL,
+            costo_base NUMERIC NOT NULL,
+            duracion_meses INTEGER NOT NULL
+        );
+    """)
+
+    # TABLA VENTAS CONTABLES
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ventas_contables (
+            codigo_venta VARCHAR(50) PRIMARY KEY,
+            fecha DATE NOT NULL,
+            cliente VARCHAR(100) NOT NULL,
+            telefono VARCHAR(50),
+            id_servicio VARCHAR(20) NOT NULL,
+            precio_venta NUMERIC NOT NULL,
+            utilidad NUMERIC NOT NULL,
+            correo_cuenta VARCHAR(100),
+            fecha_vencimiento DATE NOT NULL,
+            metodo_pago VARCHAR(50),
+            numero_nota VARCHAR(50)
+        );
+    """)
+
+    # TABLA PAGOS TERCEROS
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pagos_terceros (
+            id_pago VARCHAR(50) PRIMARY KEY,
+            codigo_venta VARCHAR(50) NOT NULL,
+            fecha_pago DATE NOT NULL,
+            monto_usdt NUMERIC NOT NULL,
+            nombre_tercero VARCHAR(100)
+        );
+    """)
+
+    conexion.commit()
+    conexion.close()
+
+
+# ======================================
 # GENERAR CÓDIGO AUTOMÁTICO
 # ======================================
 def generar_codigo():
@@ -481,6 +531,7 @@ def renovar(codigo):
 # INICIO
 # ======================================
 crear_tabla()
+crear_tablas_contables()
 
 if __name__ == "__main__":
     app.run(debug=True)
