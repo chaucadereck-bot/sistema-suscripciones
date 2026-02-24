@@ -1,3 +1,15 @@
+# Base local
 database.db
-__pycache__/
+
+# Archivos subidos localmente
+uploads/
+
+# Entorno
 .env
+
+# Python
+__pycache__/
+*.pyc
+
+# Mac
+.DS_Store

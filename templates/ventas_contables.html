@@ -4,13 +4,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <title>Ventas Contables</title>
+
+<style>
+table td {
+    vertical-align: middle !important;
+}
+
+.btn-sm {
+    padding: 3px 8px;
+    font-size: 0.8rem;
+}
+</style>
+
 </head>
+
 <body class="bg-light">
 <div class="container mt-4">
 
 <h3>Ventas Contables</h3>
 
-<table class="table table-bordered table-striped">
+<table class="table table-bordered table-striped align-middle">
 <thead class="table-dark">
 <tr>
 <th>Código</th>
@@ -22,12 +35,15 @@
 <th>Utilidad</th>
 <th>Método Pago</th>
 <th>Nota Venta</th>
+<th>Banco</th>
 </tr>
 </thead>
+
 <tbody>
 
 {% for d in datos %}
 <tr>
+
 <td>{{ d[0] }}</td>
 <td>{{ d[1] }}</td>
 <td>{{ d[2] }}</td>
@@ -36,7 +52,69 @@
 <td>${{ d[5] }}</td>
 <td>${{ d[6] }}</td>
 <td>{{ d[7] }}</td>
-<td>{{ d[8] if d[8] else "-" }}</td>
+
+<!-- NOTA DE VENTA -->
+<td class="text-center">
+
+{% if d[8] %}
+
+    {% if d[10] %}
+        <a href="{{ d[10] }}" target="_blank"
+           class="btn btn-sm btn-outline-success">
+            Ver
+        </a>
+    {% else %}
+        <form action="/subir-archivo/venta_nota/{{ d[0] }}"
+              method="POST"
+              enctype="multipart/form-data">
+
+            <input type="file"
+                   name="archivo"
+                   id="file_nota_{{ loop.index }}"
+                   hidden>
+
+            <label for="file_nota_{{ loop.index }}"
+                   class="btn btn-sm btn-success">
+                Subir
+            </label>
+
+        </form>
+    {% endif %}
+
+{% else %}
+    <span class="text-muted">-</span>
+{% endif %}
+
+</td>
+
+<!-- COMPROBANTE BANCO -->
+<td class="text-center">
+
+{% if d[9] %}
+    <a href="{{ d[9] }}" target="_blank"
+       class="btn btn-sm btn-outline-primary">
+        Ver
+    </a>
+{% else %}
+    <form action="/subir-archivo/venta_banco/{{ d[0] }}"
+          method="POST"
+          enctype="multipart/form-data">
+
+        <input type="file"
+               name="archivo"
+               id="file_banco_{{ loop.index }}"
+               hidden required>
+
+        <label for="file_banco_{{ loop.index }}"
+               class="btn btn-sm btn-primary">
+            Subir
+        </label>
+
+    </form>
+{% endif %}
+
+</td>
+
 </tr>
 {% endfor %}
 

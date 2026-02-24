@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, send_from_directory
 import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -9,7 +9,23 @@ import threading
 import time
 
 
+
 app = Flask(__name__)
+
+# ==========================
+# CONFIGURACIÓN SUPABASE
+# ==========================
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+USANDO_SUPABASE = SUPABASE_URL is not None and SUPABASE_KEY is not None
+
+if USANDO_SUPABASE:
+    from supabase import create_client
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
 app.secret_key = "clave_super_secreta_2026" 
 app.config.update(
     SESSION_COOKIE_SECURE=bool(os.getenv("DATABASE_URL")),
@@ -695,6 +711,90 @@ def contabilidad():
 
 
 # ======================================
+# COMPROBANTES NUBE
+# ======================================
+@app.route("/subir-archivo/<tipo>/<codigo>", methods=["POST"])
+def subir_archivo(tipo, codigo):
+
+    archivo = request.files.get("archivo")
+
+    if not archivo:
+        return "No se envió archivo"
+
+    nombre = f"{codigo}_{archivo.filename}"
+
+    try:
+
+        # ==========================
+        # 🌩 MODO NUBE (Railway)
+        # ==========================
+        if USANDO_SUPABASE:
+
+            ruta_storage = f"{tipo}/{nombre}"
+
+            supabase.storage.from_("comprobantes").upload(
+                ruta_storage,
+                archivo.read()
+            )
+
+            url = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+
+        # ==========================
+        # 💻 MODO LOCAL
+        # ==========================
+        else:
+
+            carpeta = f"uploads/{tipo}"
+            os.makedirs(carpeta, exist_ok=True)
+
+            ruta_local = os.path.join(carpeta, nombre)
+            archivo.save(ruta_local)
+
+            url = f"/uploads/{tipo}/{nombre}"
+
+        # ==========================
+        # GUARDAR URL EN BASE
+        # ==========================
+
+        conn = obtener_conexion()
+        cur = conn.cursor()
+
+        if tipo == "venta_banco":
+            cur.execute("""
+                UPDATE ventas_contables 
+                SET comprobante_banco = ? 
+                WHERE codigo = ?
+            """, (url, codigo))
+
+        elif tipo == "venta_nota":
+            cur.execute("""
+                UPDATE ventas_contables 
+                SET nota_venta_archivo = ? 
+                WHERE codigo = ?
+            """, (url, codigo))
+
+        elif tipo == "pago_binance":
+            cur.execute("""
+                UPDATE pagos_terceros 
+                SET comprobante_binance = ? 
+                WHERE codigo_venta = ?
+            """, (url, codigo))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return redirect("/ventas-contables")
+
+    except Exception as e:
+        return f"Error subiendo archivo: {e}"
+    
+@app.route("/uploads/<path:filename>")
+def archivos_locales(filename):
+    return send_from_directory("uploads", filename)
+
+
+# ======================================
 # VENTAS CONTABLES
 # ======================================
 @app.route("/ventas_contables")
@@ -706,19 +806,12 @@ def ventas_contables():
     cursor = conexion.cursor()
 
     cursor.execute("""
-        SELECT 
-            codigo_venta,
-            fecha,
-            cliente,
-            telefono,
-            id_servicio,
-            precio_venta,
-            utilidad,
-            metodo_pago,
-            numero_nota
-        FROM ventas_contables
-        ORDER BY fecha DESC
-    """)
+    SELECT codigo_venta, fecha, cliente, telefono, id_servicio,
+           precio_venta, utilidad, metodo_pago, numero_nota,
+           comprobante_banco, nota_venta_archivo
+    FROM ventas_contables
+    ORDER BY fecha DESC
+    """) 
 
     datos = cursor.fetchall()
     conexion.close()
