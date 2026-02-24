@@ -3,19 +3,12 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<title>Contabilidad</title>
+<title>Ventas Contables</title>
 </head>
 <body class="bg-light">
 <div class="container mt-4">
 
-<h3>Resumen Contable</h3>
-
-<div class="mb-3">
-    <a href="/ventas_contables" class="btn btn-primary">📄 Ver Ventas</a>
-    <a href="/pagos_terceros" class="btn btn-warning">💸 Ver Pagos</a>
-</div>
-
-<div class="row mb-4">
+<h3>Ventas Contables</h3>
 
 <table class="table table-bordered table-striped">
 <thead class="table-dark">
@@ -23,9 +16,12 @@
 <th>Código</th>
 <th>Fecha</th>
 <th>Cliente</th>
-<th>Ingreso ($)</th>
-<th>Pago Tercero (USDT)</th>
+<th>Teléfono</th>
+<th>Servicio</th>
+<th>Ingreso</th>
 <th>Utilidad</th>
+<th>Método Pago</th>
+<th>Nota Venta</th>
 </tr>
 </thead>
 <tbody>
@@ -37,20 +33,17 @@
 <td>{{ d[2] }}</td>
 <td>{{ d[3] }}</td>
 <td>{{ d[4] }}</td>
-<td>
-{% if d[5] >= 0 %}
-<span class="text-success fw-bold">{{ d[5] }}</span>
-{% else %}
-<span class="text-danger fw-bold">{{ d[5] }}</span>
-{% endif %}
-</td>
+<td>${{ d[5] }}</td>
+<td>${{ d[6] }}</td>
+<td>{{ d[7] }}</td>
+<td>{{ d[8] if d[8] else "-" }}</td>
 </tr>
 {% endfor %}
 
 </tbody>
 </table>
 
-<a href="/" class="btn btn-secondary">Volver</a>
+<a href="/contabilidad" class="btn btn-secondary">Volver</a>
 
 </div>
 </body>

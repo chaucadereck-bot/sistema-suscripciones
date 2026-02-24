@@ -695,6 +695,66 @@ def contabilidad():
 
 
 # ======================================
+# VENTAS CONTABLES
+# ======================================
+@app.route("/ventas_contables")
+def ventas_contables():
+    if "usuario" not in session:
+        return redirect("/login")
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT 
+            codigo_venta,
+            fecha,
+            cliente,
+            telefono,
+            id_servicio,
+            precio_venta,
+            utilidad,
+            metodo_pago,
+            numero_nota
+        FROM ventas_contables
+        ORDER BY fecha DESC
+    """)
+
+    datos = cursor.fetchall()
+    conexion.close()
+
+    return render_template("ventas_contables.html", datos=datos)
+
+
+# ======================================
+# PAGOS TERCEROS
+# ======================================
+@app.route("/pagos_terceros")
+def pagos_terceros():
+    if "usuario" not in session:
+        return redirect("/login")
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT 
+            id_pago,
+            codigo_venta,
+            fecha_pago,
+            monto_usdt,
+            nombre_tercero
+        FROM pagos_terceros
+        ORDER BY fecha_pago DESC
+    """)
+
+    datos = cursor.fetchall()
+    conexion.close()
+
+    return render_template("pagos_terceros.html", datos=datos)
+
+
+# ======================================
 # INICIO
 # ======================================
 crear_tabla()
