@@ -668,10 +668,24 @@ def renovar(codigo):
 def migrar_nube():
     try:
         from migrar_datos import ejecutar_migracion
-        ejecutar_migracion()
-        return "Migración ejecutada correctamente en la nube."
+        
+        resultado = ejecutar_migracion()
+
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM ventas_contables")
+        ventas = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM pagos_terceros")
+        pagos = cursor.fetchone()[0]
+
+        conexion.close()
+
+        return f"OK | Ventas: {ventas} | Pagos: {pagos}"
+
     except Exception as e:
-        return f"Error en migración: {e}"
+        return f"ERROR: {str(e)}"
 
 
 # ======================================
