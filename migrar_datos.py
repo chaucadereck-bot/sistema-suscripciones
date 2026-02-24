@@ -1,28 +1,40 @@
+import os
+import pandas as pd
+import psycopg2
+
 def ejecutar_migracion():
-    import os
-    import pandas as pd
-    import psycopg2
 
     DATABASE_URL = os.getenv("DATABASE_URL")
 
     if not DATABASE_URL:
-        return "No DATABASE_URL"
+        return "No DATABASE_URL detectada"
 
     conexion = psycopg2.connect(DATABASE_URL)
     cursor = conexion.cursor()
 
-    try:
-        ventas_df = pd.read_excel("registro_contable.xlsx", sheet_name="ventas_contables")
-        pagos_df = pd.read_excel("registro_contable.xlsx", sheet_name="pago_terceros")
-    except Exception as e:
-        return f"Error leyendo Excel: {e}"
+    # Leer hojas correctas
+    ventas_df = pd.read_excel("registro_contable.xlsx", sheet_name="ventas_contables")
+    pagos_df = pd.read_excel("registro_contable.xlsx", sheet_name="pago_terceros")
 
+    # Limpiar nombres columnas
     ventas_df.columns = ventas_df.columns.str.strip().str.lower()
     pagos_df.columns = pagos_df.columns.str.strip().str.lower()
 
+    # ==========================
+    # INSERTAR VENTAS CONTABLES
+    # ==========================
     for _, row in ventas_df.iterrows():
+
         fecha = pd.to_datetime(row["fecha"]).strftime("%Y-%m-%d")
         fecha_v = pd.to_datetime(row["fecha_vencimiento"]).strftime("%Y-%m-%d")
+
+        # 🔹 CORRECCIÓN PROFESIONAL DE numero_nota
+        numero_nota = row["numero_nota"]
+
+        if pd.isna(numero_nota):
+            numero_nota = None
+        else:
+            numero_nota = str(int(numero_nota)).zfill(9)
 
         cursor.execute("""
             INSERT INTO ventas_contables
@@ -38,14 +50,18 @@ def ejecutar_migracion():
             row["telefono"],
             row["id_servicio"],
             row["precio_venta"],
-            row["precio_venta"],
+            row["precio_venta"],  # utilidad provisional
             row["correo_cuenta"],
             fecha_v,
             row["metodo_pago"],
-            row["numero_nota"]
+            numero_nota
         ))
 
+    # ==========================
+    # INSERTAR PAGOS TERCEROS
+    # ==========================
     for _, row in pagos_df.iterrows():
+
         fecha_pago = pd.to_datetime(row["fecha_pago"]).strftime("%Y-%m-%d")
 
         cursor.execute("""
@@ -64,4 +80,4 @@ def ejecutar_migracion():
     conexion.commit()
     conexion.close()
 
-    return "Migracion OK"
+    return "Migración completada correctamente"
