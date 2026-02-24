@@ -662,30 +662,36 @@ def renovar(codigo):
 
 
 # ======================================
-# MIGRACION MANUAL NUBE (TEMPORAL)
+# CONTABILIDAD
 # ======================================
-@app.route("/migrar_nube")
-def migrar_nube():
-    try:
-        from migrar_datos import ejecutar_migracion
-        
-        resultado = ejecutar_migracion()
+@app.route("/contabilidad")
+def contabilidad():
+    if "usuario" not in session:
+        return redirect("/login")
 
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-        cursor.execute("SELECT COUNT(*) FROM ventas_contables")
-        ventas = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT 
+            v.codigo_venta,
+            v.fecha,
+            v.cliente,
+            v.precio_venta,
+            COALESCE(SUM(p.monto_usdt), 0) as total_pagado,
+            v.precio_venta - COALESCE(SUM(p.monto_usdt), 0) as utilidad
+        FROM ventas_contables v
+        LEFT JOIN pagos_terceros p 
+            ON v.codigo_venta = p.codigo_venta
+        GROUP BY v.codigo_venta
+        ORDER BY v.fecha DESC
+    """)
 
-        cursor.execute("SELECT COUNT(*) FROM pagos_terceros")
-        pagos = cursor.fetchone()[0]
+    datos = cursor.fetchall()
 
-        conexion.close()
+    conexion.close()
 
-        return f"OK | Ventas: {ventas} | Pagos: {pagos}"
-
-    except Exception as e:
-        return f"ERROR: {str(e)}"
+    return render_template("contabilidad.html", datos=datos)
 
 
 # ======================================
