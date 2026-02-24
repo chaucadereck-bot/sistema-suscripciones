@@ -667,7 +667,8 @@ def renovar(codigo):
 @app.route("/migrar_nube")
 def migrar_nube():
     try:
-        os.system("python migrar_datos.py")
+        from migrar_datos import ejecutar_migracion
+        ejecutar_migracion()
         return "Migración ejecutada correctamente en la nube."
     except Exception as e:
         return f"Error en migración: {e}"

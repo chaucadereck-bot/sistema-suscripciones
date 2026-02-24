@@ -3,108 +3,72 @@ import sqlite3
 import psycopg2
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+def ejecutar_migracion():
 
-def obtener_conexion():
-    if DATABASE_URL:
-        return psycopg2.connect(DATABASE_URL)
-    else:
-        return sqlite3.connect("database.db")
+    DATABASE_URL = os.getenv("DATABASE_URL")
 
-print("Conectando a la base de datos...")
-conexion = obtener_conexion()
-cursor = conexion.cursor()
+    def obtener_conexion():
+        if DATABASE_URL:
+            return psycopg2.connect(DATABASE_URL)
+        else:
+            return sqlite3.connect("database.db")
 
-print("Cargando Excel correcto...")
+    print("Conectando a la base de datos...")
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-ventas_df = pd.read_excel("registro_contable.xlsx", sheet_name="ventas_contables")
-pagos_df = pd.read_excel("registro_contable.xlsx", sheet_name="pago_terceros")
+    print("Cargando Excel correcto...")
 
-ventas_df.columns = ventas_df.columns.str.strip().str.lower()
-pagos_df.columns = pagos_df.columns.str.strip().str.lower()
+    ventas_df = pd.read_excel("registro_contable.xlsx", sheet_name="ventas_contables")
+    pagos_df = pd.read_excel("registro_contable.xlsx", sheet_name="pago_terceros")
 
-print("Insertando ventas_contables...")
+    ventas_df.columns = ventas_df.columns.str.strip().str.lower()
+    pagos_df.columns = pagos_df.columns.str.strip().str.lower()
 
-for _, row in ventas_df.iterrows():
-    try:
+    print("Insertando ventas_contables...")
+
+    for _, row in ventas_df.iterrows():
         fecha = pd.to_datetime(row["fecha"]).strftime("%Y-%m-%d")
         fecha_v = pd.to_datetime(row["fecha_vencimiento"]).strftime("%Y-%m-%d")
 
-        if DATABASE_URL:
-            cursor.execute("""
-                INSERT INTO ventas_contables
-                (codigo_venta, fecha, cliente, telefono, id_servicio,
-                 precio_venta, utilidad, correo_cuenta,
-                 fecha_vencimiento, metodo_pago, numero_nota)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """, (
-                row["codigo_venta"],
-                fecha,
-                row["cliente"],
-                row["telefono"],
-                row["id_servicio"],
-                row["precio_venta"],
-                row["precio_venta"],  # utilidad provisional
-                row["correo_cuenta"],
-                fecha_v,
-                row["metodo_pago"],
-                row["numero_nota"]
-            ))
-        else:
-            cursor.execute("""
-                INSERT INTO ventas_contables
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
-            """, (
-                row["codigo_venta"],
-                fecha,
-                row["cliente"],
-                row["telefono"],
-                row["id_servicio"],
-                row["precio_venta"],
-                row["precio_venta"],
-                row["correo_cuenta"],
-                fecha_v,
-                row["metodo_pago"],
-                row["numero_nota"]
-            ))
+        cursor.execute("""
+            INSERT INTO ventas_contables
+            (codigo_venta, fecha, cliente, telefono, id_servicio,
+             precio_venta, utilidad, correo_cuenta,
+             fecha_vencimiento, metodo_pago, numero_nota)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            row["codigo_venta"],
+            fecha,
+            row["cliente"],
+            row["telefono"],
+            row["id_servicio"],
+            row["precio_venta"],
+            row["precio_venta"],
+            row["correo_cuenta"],
+            fecha_v,
+            row["metodo_pago"],
+            row["numero_nota"]
+        ))
 
-    except Exception as e:
-        print("Error en venta:", row.get("codigo_venta"), e)
+    print("Insertando pagos_terceros...")
 
-print("Insertando pagos_terceros...")
-
-for _, row in pagos_df.iterrows():
-    try:
+    for _, row in pagos_df.iterrows():
         fecha_pago = pd.to_datetime(row["fecha_pago"]).strftime("%Y-%m-%d")
 
-        if DATABASE_URL:
-            cursor.execute("""
-                INSERT INTO pagos_terceros
-                (id_pago, codigo_venta, fecha_pago, monto_usdt, nombre_tercero)
-                VALUES (%s,%s,%s,%s,%s)
-            """, (
-                row["id_pago"],
-                row["codigo_venta"],
-                fecha_pago,
-                row["monto_usdt"],
-                row["nombre_tercero"]
-            ))
-        else:
-            cursor.execute("""
-                INSERT INTO pagos_terceros
-                VALUES (?,?,?,?,?)
-            """, (
-                row["id_pago"],
-                row["codigo_venta"],
-                fecha_pago,
-                row["monto_usdt"],
-                row["nombre_tercero"]
-            ))
+        cursor.execute("""
+            INSERT INTO pagos_terceros
+            (id_pago, codigo_venta, fecha_pago, monto_usdt, nombre_tercero)
+            VALUES (%s,%s,%s,%s,%s)
+        """, (
+            row["id_pago"],
+            row["codigo_venta"],
+            fecha_pago,
+            row["monto_usdt"],
+            row["nombre_tercero"]
+        ))
 
-    except Exception as e:
-        print("Error en pago:", row.get("id_pago"), e)
+    conexion.commit()
+    conexion.close()
 
-conexion.commit()
-conexion.close()
-
-print("Migración completada correctamente.")
+    print("Migración completada correctamente.")
