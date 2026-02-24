@@ -56,7 +56,7 @@ table td {
 <!-- NOTA DE VENTA -->
 <td class="text-center">
 
-{% if d[8] %}
+{% if d[8] and d[8] != "-" and d[8] != 0 and d[8] != 0.0 %}
 
     {% if d[10] %}
         <a href="{{ d[10] }}" target="_blank"
