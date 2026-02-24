@@ -1,61 +1,110 @@
+import pandas as pd
 import sqlite3
 import psycopg2
+import os
 
-# 🔵 URL COMPLETA DE SUPABASE (SESSION POOLER)
-DATABASE_URL = "postgresql://postgres.smhkvcpdmqffaasyuzxg:Eveca1023_2016@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# =========================
-# 1️⃣ Conectar a SQLite
-# =========================
-sqlite_conn = sqlite3.connect("database.db")
-sqlite_cursor = sqlite_conn.cursor()
+def obtener_conexion():
+    if DATABASE_URL:
+        return psycopg2.connect(DATABASE_URL)
+    else:
+        return sqlite3.connect("database.db")
 
-sqlite_cursor.execute("SELECT * FROM ventas")
-registros = sqlite_cursor.fetchall()
+print("Conectando a la base de datos...")
+conexion = obtener_conexion()
+cursor = conexion.cursor()
 
-print(f"SQLite tiene {len(registros)} registros")
+print("Cargando Excel correcto...")
 
-# =========================
-# 2️⃣ Conectar a Supabase
-# =========================
-try:
-    pg_conn = psycopg2.connect(
-        DATABASE_URL,
-        sslmode="require"
-    )
-    print("✅ Conexión exitosa a Supabase")
-except Exception as e:
-    print("❌ Error conectando a Supabase:")
-    print(e)
-    exit()
+ventas_df = pd.read_excel("registro_contable.xlsx", sheet_name="ventas_contables")
+pagos_df = pd.read_excel("registro_contable.xlsx", sheet_name="pago_terceros")
 
-pg_cursor = pg_conn.cursor()
+ventas_df.columns = ventas_df.columns.str.strip().str.lower()
+pagos_df.columns = pagos_df.columns.str.strip().str.lower()
 
-# =========================
-# 3️⃣ Insertar datos
-# =========================
-for fila in registros:
+print("Insertando ventas_contables...")
+
+for _, row in ventas_df.iterrows():
     try:
-        pg_cursor.execute("""
-            INSERT INTO ventas (
-                codigo_venta,
+        fecha = pd.to_datetime(row["fecha"]).strftime("%Y-%m-%d")
+        fecha_v = pd.to_datetime(row["fecha_vencimiento"]).strftime("%Y-%m-%d")
+
+        if DATABASE_URL:
+            cursor.execute("""
+                INSERT INTO ventas_contables
+                (codigo_venta, fecha, cliente, telefono, id_servicio,
+                 precio_venta, utilidad, correo_cuenta,
+                 fecha_vencimiento, metodo_pago, numero_nota)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                row["codigo_venta"],
                 fecha,
-                duracion_meses,
-                fecha_vencimiento,
-                cliente,
-                telefono,
-                servicio,
-                precio,
-                correo_cuenta,
-                estado
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, fila)
+                row["cliente"],
+                row["telefono"],
+                row["id_servicio"],
+                row["precio_venta"],
+                row["precio_venta"],  # utilidad provisional
+                row["correo_cuenta"],
+                fecha_v,
+                row["metodo_pago"],
+                row["numero_nota"]
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO ventas_contables
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+                row["codigo_venta"],
+                fecha,
+                row["cliente"],
+                row["telefono"],
+                row["id_servicio"],
+                row["precio_venta"],
+                row["precio_venta"],
+                row["correo_cuenta"],
+                fecha_v,
+                row["metodo_pago"],
+                row["numero_nota"]
+            ))
+
     except Exception as e:
-        print("❌ Error insertando fila:")
-        print(e)
+        print("Error en venta:", row.get("codigo_venta"), e)
 
-pg_conn.commit()
-print("✅ Migración finalizada correctamente")
+print("Insertando pagos_terceros...")
 
-sqlite_conn.close()
-pg_conn.close()
+for _, row in pagos_df.iterrows():
+    try:
+        fecha_pago = pd.to_datetime(row["fecha_pago"]).strftime("%Y-%m-%d")
+
+        if DATABASE_URL:
+            cursor.execute("""
+                INSERT INTO pagos_terceros
+                (id_pago, codigo_venta, fecha_pago, monto_usdt, nombre_tercero)
+                VALUES (%s,%s,%s,%s,%s)
+            """, (
+                row["id_pago"],
+                row["codigo_venta"],
+                fecha_pago,
+                row["monto_usdt"],
+                row["nombre_tercero"]
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO pagos_terceros
+                VALUES (?,?,?,?,?)
+            """, (
+                row["id_pago"],
+                row["codigo_venta"],
+                fecha_pago,
+                row["monto_usdt"],
+                row["nombre_tercero"]
+            ))
+
+    except Exception as e:
+        print("Error en pago:", row.get("id_pago"), e)
+
+conexion.commit()
+conexion.close()
+
+print("Migración completada correctamente.")
