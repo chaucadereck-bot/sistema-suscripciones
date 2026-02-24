@@ -831,14 +831,15 @@ def pagos_terceros():
     cursor = conexion.cursor()
 
     cursor.execute("""
-        SELECT 
-            id_pago,
-            codigo_venta,
-            fecha_pago,
-            monto_usdt,
-            nombre_tercero
-        FROM pagos_terceros
-        ORDER BY fecha_pago DESC
+    SELECT
+        id_pago,
+        codigo_venta,
+        fecha_pago,
+        monto_usdt,
+        nombre_tercero,
+        comprobante_binance
+    FROM pagos_terceros
+    ORDER BY fecha_pago DESC
     """)
 
     datos = cursor.fetchall()
