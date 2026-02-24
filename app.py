@@ -662,6 +662,18 @@ def renovar(codigo):
 
 
 # ======================================
+# MIGRACION MANUAL NUBE (TEMPORAL)
+# ======================================
+@app.route("/migrar_nube")
+def migrar_nube():
+    try:
+        import migrar_datos
+        return "Migración ejecutada correctamente en la nube."
+    except Exception as e:
+        return f"Error en migración: {e}"
+
+
+# ======================================
 # INICIO
 # ======================================
 crear_tabla()
