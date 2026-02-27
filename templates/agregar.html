@@ -4,56 +4,187 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <title>Agregar Cliente</title>
+
+<style>
+body {
+    background-color: #f4f6f9;
+    font-size: 14px;
+}
+
+.card {
+    border-radius: 12px;
+}
+
+.section-title {
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+</style>
 </head>
-<body class="bg-light">
+
+<body>
+
 <div class="container mt-4">
 
-<h3>Agregar Cliente</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Agregar Cliente</h4>
+    <a href="/" class="btn btn-secondary btn-sm shadow-sm">Volver</a>
+</div>
 
-<form method="POST">
+<div class="card shadow-sm p-4">
 
-<!-- Código automático -->
-<input name="codigo_venta" class="form-control mb-2" value="{{ codigo }}" readonly>
+<form method="POST" enctype="multipart/form-data">
 
-<!-- Fecha inicio -->
-<label>Fecha Inicio:</label>
-<input type="date" name="fecha" class="form-control mb-2" required>
+<!-- ===================== -->
+<!-- DATOS GENERALES -->
+<!-- ===================== -->
+<div class="section-title">Datos Generales</div>
 
-<!-- Cliente -->
-<input name="cliente" class="form-control mb-2" placeholder="Cliente" required>
+<div class="row mb-3">
 
-<!-- Teléfono -->
-<input name="telefono" class="form-control mb-2" placeholder="Teléfono" required>
+<div class="col-md-4">
+<label class="form-label">Código</label>
+<input name="codigo_venta"
+       class="form-control"
+       value="{{ codigo }}"
+       readonly>
+</div>
 
-<!-- Servicio -->
-<label>Servicio:</label>
-<select name="servicio" class="form-control mb-2" required>
+<div class="col-md-4">
+<label class="form-label">Fecha Inicio</label>
+<input type="date"
+       name="fecha"
+       class="form-control"
+       required>
+</div>
+
+<div class="col-md-4">
+<label class="form-label">Servicio</label>
+<select name="servicio"
+        class="form-select"
+        required>
     <option value="">Seleccione un servicio</option>
     {% for s in servicios %}
         <option value="{{ s[0] }}">{{ s[1] }}</option>
     {% endfor %}
 </select>
+</div>
 
-<!-- Estos campos serán sobrescritos automáticamente -->
-<input name="duracion_meses" type="hidden">
-<input name="precio" type="hidden">
-<input name="fecha_vencimiento" type="hidden">
+</div>
 
-<!-- Correo -->
-<input name="correo_cuenta" type="email" class="form-control mb-2" placeholder="Correo Cuenta" required>
+<div class="row mb-3">
 
-<!-- Estado -->
-<select name="estado" class="form-control mb-2">
-<option value="activo">Activo</option>
-<option value="inactivo">Inactivo</option>
-<option value="vencido">Vencido</option>
+<div class="col-md-6">
+<label class="form-label">Cliente</label>
+<input name="cliente"
+       class="form-control"
+       required>
+</div>
+
+<div class="col-md-6">
+<label class="form-label">Teléfono</label>
+<input name="telefono"
+       class="form-control"
+       required>
+</div>
+
+</div>
+
+<div class="mb-3">
+<label class="form-label">Correo Cuenta</label>
+<input name="correo_cuenta"
+       type="email"
+       class="form-control"
+       required>
+</div>
+
+<hr>
+
+<!-- ===================== -->
+<!-- PROVEEDOR -->
+<!-- ===================== -->
+<div class="section-title">Proveedor</div>
+
+<div class="row mb-3">
+
+<div class="col-md-6">
+<label class="form-label">Proveedor existente</label>
+<select name="proveedor_select"
+        class="form-select">
+    <option value="">Seleccionar proveedor existente</option>
+    {% for p in proveedores %}
+        <option value="{{ p[0] }}">{{ p[0] }}</option>
+    {% endfor %}
 </select>
+</div>
 
-<button class="btn btn-success">Guardar</button>
-<a href="/" class="btn btn-secondary">Volver</a>
+<div class="col-md-6">
+<label class="form-label">O nuevo proveedor</label>
+<input name="proveedor_nuevo"
+       class="form-control"
+       placeholder="Proveedor nuevo (opcional)">
+</div>
+
+</div>
+
+<hr>
+
+<!-- ===================== -->
+<!-- ARCHIVOS -->
+<!-- ===================== -->
+<div class="section-title">Archivos</div>
+
+<div class="row mb-3">
+
+<div class="col-md-6">
+<label class="form-label fw-bold">
+Comprobante Banco (Obligatorio) *
+</label>
+<input type="file"
+       name="comprobante_banco"
+       class="form-control"
+       accept="image/*,.pdf"
+       required>
+</div>
+
+<div class="col-md-6">
+<label class="form-label">
+Nota de Venta (Opcional)
+</label>
+<input type="file"
+       name="nota_venta"
+       class="form-control"
+       accept="image/*,.pdf">
+</div>
+
+</div>
+
+<hr>
+
+<div class="d-flex justify-content-end mt-3">
+
+<button type="submit"
+        class="btn btn-primary btn-sm shadow-sm me-2"
+        onclick="this.disabled=true; this.innerText='Guardando...'; this.form.submit();">
+Guardar Cliente
+</button>
+
+<a href="/"
+   class="btn btn-outline-secondary btn-sm">
+Cancelar
+</a>
+
+</div>
 
 </form>
 
 </div>
+</div>
+
 </body>
 </html>

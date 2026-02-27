@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<title>
+{% if modo == "nuevo" %}
+Nuevo Servicio
+{% else %}
+Editar Servicio
+{% endif %}
+</title>
+
+<style>
+body {
+    background-color: #f4f6f9;
+    font-size: 14px;
+}
+
+.card-container {
+    border-radius: 12px;
+}
+</style>
+</head>
+
+<body>
+<div class="container mt-4">
+
+<h4 class="fw-bold mb-4">
+{% if modo == "nuevo" %}
+Nuevo Servicio
+{% else %}
+Editar Servicio
+{% endif %}
+</h4>
+
+<div class="card shadow-sm card-container">
+<div class="card-body">
+
+<form method="POST">
+
+<!-- ID SERVICIO -->
+<div class="mb-3">
+<label class="form-label">ID Servicio</label>
+<input type="text"
+       name="id_servicio"
+       class="form-control"
+       {% if modo == "editar" %}
+           value="{{ servicio[0] }}"
+           readonly
+       {% endif %}
+       placeholder="SERV-010"
+       required>
+</div>
+
+<!-- NOMBRE -->
+<div class="mb-3">
+<label class="form-label">Nombre Servicio</label>
+<input type="text"
+       name="nombre"
+       class="form-control"
+       value="{% if modo == 'editar' %}{{ servicio[1] }}{% endif %}"
+       required>
+</div>
+
+<!-- PRECIO -->
+<div class="mb-3">
+<label class="form-label">Precio Venta</label>
+<input type="number"
+       step="0.01"
+       name="precio"
+       class="form-control"
+       value="{% if modo == 'editar' %}{{ servicio[2] }}{% endif %}"
+       required>
+</div>
+
+<!-- COSTO -->
+<div class="mb-3">
+<label class="form-label">Costo Base</label>
+<input type="number"
+       step="0.01"
+       name="costo"
+       class="form-control"
+       value="{% if modo == 'editar' %}{{ servicio[3] }}{% endif %}"
+       required>
+</div>
+
+<!-- DURACIÓN -->
+<div class="mb-3">
+<label class="form-label">Duración (meses)</label>
+<input type="number"
+       name="duracion"
+       class="form-control"
+       value="{% if modo == 'editar' %}{{ servicio[4] }}{% endif %}"
+       required>
+</div>
+
+<div class="mt-4">
+
+<button type="submit"
+        class="btn btn-success btn-sm shadow-sm me-2"
+        onclick="this.disabled=true; this.innerText='Guardando...'; this.form.submit();">
+
+{% if modo == "nuevo" %}
+Crear Servicio
+{% else %}
+Actualizar Servicio
+{% endif %}
+
+</button>
+
+<a href="/servicios"
+   class="btn btn-secondary btn-sm shadow-sm">
+Cancelar
+</a>
+
+</div>
+
+</form>
+
+</div>
+</div>
+
+</div>
+</body>
+</html>

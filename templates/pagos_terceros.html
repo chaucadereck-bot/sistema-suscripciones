@@ -6,71 +6,112 @@
 <title>Pagos a Terceros</title>
 
 <style>
-table td {
-    vertical-align: middle !important;
+body {
+    background-color: #f4f6f9;
+    font-size: 14px;
 }
 
-.btn-sm {
-    padding: 3px 8px;
-    font-size: 0.8rem;
+.table thead {
+    background-color: #212529;
+    color: white;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f3f5;
+}
+
+.badge-id {
+    background-color: #e9ecef;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.card-container {
+    border-radius: 12px;
+}
+
+.btn-xs {
+    padding: 4px 8px;
+    font-size: 12px;
 }
 </style>
 
 </head>
 
-<body class="bg-light">
+<body>
 <div class="container mt-4">
 
-<h3>Pagos a Terceros</h3>
+<h4 class="fw-bold mb-4">Pagos a Terceros</h4>
 
-<table class="table table-bordered table-striped align-middle">
-<thead class="table-dark">
+<div class="card shadow-sm card-container">
+<div class="card-body p-0">
+
+<table class="table table-hover text-center align-middle mb-0">
+
+<thead>
 <tr>
+<th>#</th>
 <th>ID Pago</th>
 <th>Código Venta</th>
-<th>Fecha Pago</th>
+<th>Fecha</th>
 <th>Monto (USDT)</th>
 <th>Proveedor</th>
-<th>Comprobante Binance</th>
+<th>Comprobante</th>
 </tr>
 </thead>
 
 <tbody>
 
-{% for d in datos %}
+{% for p in datos %}
 <tr>
 
-<td>{{ d[0] }}</td>
-<td>{{ d[1] }}</td>
-<td>{{ d[2] }}</td>
-<td>${{ d[3] }}</td>
-<td>{{ d[4] }}</td>
+<td>{{ loop.index }}</td>
 
-<!-- COMPROBANTE BINANCE -->
-<td class="text-center">
+<td>
+<span class="badge-id">
+{{ p[0] }}
+</span>
+</td>
 
-{% if d[5] %}
-    <a href="{{ d[5] }}" target="_blank"
-       class="btn btn-sm btn-outline-primary">
-        Ver
+<td>{{ p[1] }}</td>
+<td>{{ p[2] }}</td>
+<td>${{ p[3] }}</td>
+<td>{{ p[4] }}</td>
+
+<td>
+
+{% if p[5] %}
+    <a href="{{ p[5] }}"
+       class="btn btn-success btn-xs mb-1"
+       target="_blank">
+       Ver
     </a>
-{% else %}
-    <form action="/subir-archivo/pago_binance/{{ d[1] }}"
-          method="POST"
-          enctype="multipart/form-data">
-
-        <input type="file"
-               name="archivo"
-               id="file_binance_{{ loop.index }}"
-               hidden required>
-
-        <label for="file_binance_{{ loop.index }}"
-               class="btn btn-sm btn-primary">
-            Subir
-        </label>
-
-    </form>
 {% endif %}
+
+<form action="{{ url_for('subir_archivo', tipo='pago_binance', identificador=p[0]) }}"
+      method="POST"
+      enctype="multipart/form-data"
+      style="display:inline;">
+
+    <input type="file"
+           name="archivo"
+           id="binance_{{ p[0] }}"
+           style="display:none;"
+           onchange="this.form.submit()">
+
+    <button type="button"
+            class="btn btn-outline-primary btn-xs"
+            onclick="document.getElementById('binance_{{ p[0] }}').click();">
+
+        {% if p[5] %}
+            Reemplazar
+        {% else %}
+            Subir
+        {% endif %}
+    </button>
+
+</form>
 
 </td>
 
@@ -80,7 +121,20 @@ table td {
 </tbody>
 </table>
 
-<a href="/contabilidad" class="btn btn-secondary">Volver</a>
+</div>
+</div>
+
+<div class="mt-4">
+<a href="{{ url_for('contabilidad') }}"
+   class="btn btn-secondary btn-sm shadow-sm me-2">
+   Volver a Contabilidad
+</a>
+
+<a href="/"
+   class="btn btn-dark btn-sm shadow-sm">
+   Ir al Panel
+</a>
+</div>
 
 </div>
 </body>

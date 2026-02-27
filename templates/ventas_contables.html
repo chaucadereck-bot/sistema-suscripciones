@@ -6,36 +6,62 @@
 <title>Ventas Contables</title>
 
 <style>
-table td {
-    vertical-align: middle !important;
+body {
+    background-color: #f4f6f9;
+    font-size: 14px;
 }
 
-.btn-sm {
-    padding: 3px 8px;
-    font-size: 0.8rem;
+.table thead {
+    background-color: #212529;
+    color: white;
+}
+
+.badge-codigo {
+    background-color: #e9ecef;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.utilidad-positiva {
+    color: #198754;
+    font-weight: 600;
+}
+
+.utilidad-negativa {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.btn-xs {
+    padding: 4px 8px;
+    font-size: 12px;
 }
 </style>
-
 </head>
 
-<body class="bg-light">
+<body>
 <div class="container mt-4">
 
-<h3>Ventas Contables</h3>
+<h4 class="fw-bold mb-4">Ventas Contables</h4>
 
-<table class="table table-bordered table-striped align-middle">
-<thead class="table-dark">
+<div class="card shadow-sm">
+<div class="card-body p-0">
+
+<table class="table table-hover text-center align-middle mb-0">
+
+<thead>
 <tr>
-<th>Código</th>
-<th>Fecha</th>
+<th>#</th>
+<th>Código Venta</th>
 <th>Cliente</th>
-<th>Teléfono</th>
+<th>Fecha</th>
 <th>Servicio</th>
 <th>Ingreso</th>
+<th>Costo</th>
 <th>Utilidad</th>
-<th>Método Pago</th>
 <th>Nota Venta</th>
-<th>Banco</th>
+<th>Comprobante Banco</th>
 </tr>
 </thead>
 
@@ -44,73 +70,127 @@ table td {
 {% for d in datos %}
 <tr>
 
-<td>{{ d[0] }}</td>
-<td>{{ d[1] }}</td>
+<td>{{ loop.index }}</td>
+
+<td>
+<span class="badge-codigo">
+{{ d[1] }}
+</span>
+</td>
+
 <td>{{ d[2] }}</td>
 <td>{{ d[3] }}</td>
 <td>{{ d[4] }}</td>
+
 <td>${{ d[5] }}</td>
 <td>${{ d[6] }}</td>
-<td>{{ d[7] }}</td>
 
-<!-- NOTA DE VENTA -->
-<td class="text-center">
+<td>
+{% if d[7] >= 0 %}
+<span class="utilidad-positiva">${{ d[7] }}</span>
+{% else %}
+<span class="utilidad-negativa">${{ d[7] }}</span>
+{% endif %}
+</td>
 
-{% if d[8] and d[8] != "-" and d[8] != 0 and d[8] != 0.0 %}
+<!-- ================= NOTA ================= -->
+<td>
 
-    {% if d[10] %}
-        <a href="{{ d[10] }}" target="_blank"
-           class="btn btn-sm btn-outline-success">
-            Ver
-        </a>
-    {% else %}
-        <form action="/subir-archivo/venta_nota/{{ d[0] }}"
-              method="POST"
-              enctype="multipart/form-data">
+{% if d[8] %}
+    <a href="{{ d[8] }}" target="_blank"
+       class="btn btn-success btn-xs me-1">
+        Ver
+    </a>
 
-            <input type="file"
-                   name="archivo"
-                   id="file_nota_{{ loop.index }}"
-                   hidden>
+    <form action="{{ url_for('subir_archivo', tipo='venta_nota', identificador=d[0]) }}"
+          method="POST"
+          enctype="multipart/form-data"
+          style="display:inline;">
 
-            <label for="file_nota_{{ loop.index }}"
-                   class="btn btn-sm btn-success">
-                Subir
-            </label>
+        <input type="file"
+               name="archivo"
+               id="nota_{{ d[0] }}"
+               style="display:none;"
+               onchange="this.form.submit()">
 
-        </form>
-    {% endif %}
+        <button type="button"
+                class="btn btn-outline-primary btn-xs"
+                onclick="document.getElementById('nota_{{ d[0] }}').click();">
+            Reemplazar
+        </button>
+    </form>
 
 {% else %}
-    <span class="text-muted">-</span>
+
+    <form action="{{ url_for('subir_archivo', tipo='venta_nota', identificador=d[0]) }}"
+          method="POST"
+          enctype="multipart/form-data"
+          style="display:inline;">
+
+        <input type="file"
+               name="archivo"
+               id="nota_{{ d[0] }}"
+               style="display:none;"
+               onchange="this.form.submit()">
+
+        <button type="button"
+                class="btn btn-outline-primary btn-xs"
+                onclick="document.getElementById('nota_{{ d[0] }}').click();">
+            Subir
+        </button>
+    </form>
+
 {% endif %}
 
 </td>
 
-<!-- COMPROBANTE BANCO -->
-<td class="text-center">
+<!-- ================= BANCO ================= -->
+<td>
 
 {% if d[9] %}
     <a href="{{ d[9] }}" target="_blank"
-       class="btn btn-sm btn-outline-primary">
+       class="btn btn-success btn-xs me-1">
         Ver
     </a>
-{% else %}
-    <form action="/subir-archivo/venta_banco/{{ d[0] }}"
+
+    <form action="{{ url_for('subir_archivo', tipo='venta_banco', identificador=d[0]) }}"
           method="POST"
-          enctype="multipart/form-data">
+          enctype="multipart/form-data"
+          style="display:inline;">
 
         <input type="file"
                name="archivo"
-               id="file_banco_{{ loop.index }}"
-               hidden required>
+               id="banco_{{ d[0] }}"
+               style="display:none;"
+               onchange="this.form.submit()">
 
-        <label for="file_banco_{{ loop.index }}"
-               class="btn btn-sm btn-primary">
-            Subir
-        </label>
-
+        <button type="button"
+                class="btn btn-outline-success btn-xs"
+                onclick="document.getElementById('banco_{{ d[0] }}').click();">
+            Reemplazar
+        </button>
     </form>
+
+{% else %}
+
+    <form action="{{ url_for('subir_archivo', tipo='venta_banco', identificador=d[0]) }}"
+          method="POST"
+          enctype="multipart/form-data"
+          style="display:inline;">
+
+        <input type="file"
+               name="archivo"
+               id="banco_{{ d[0] }}"
+               style="display:none;"
+               onchange="this.form.submit()">
+
+        <button type="button"
+                class="btn btn-outline-success btn-xs"
+                onclick="document.getElementById('banco_{{ d[0] }}').click();">
+            Subir
+        </button>
+    </form>
+
 {% endif %}
 
 </td>
@@ -121,7 +201,18 @@ table td {
 </tbody>
 </table>
 
-<a href="/contabilidad" class="btn btn-secondary">Volver</a>
+</div>
+</div>
+
+<div class="mt-4">
+<a href="/contabilidad" class="btn btn-secondary btn-sm shadow-sm me-2">
+Volver a Contabilidad
+</a>
+
+<a href="/" class="btn btn-dark btn-sm shadow-sm">
+Ir al Panel
+</a>
+</div>
 
 </div>
 </body>
