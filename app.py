@@ -265,7 +265,7 @@ def enviar_telegram(mensaje):
 
 
 # ======================================
-# REVISIÓN AUTOMÁTICA
+# REVISIÓN AUTOMÁTICA PROFESIONAL
 # ======================================
 def revisar_vencimientos():
 
@@ -275,7 +275,11 @@ def revisar_vencimientos():
     cursor.execute("""
         SELECT codigo_venta, cliente, servicio,
                duracion_meses, telefono,
-               fecha_vencimiento, estado
+               fecha_vencimiento,
+               notificado_3,
+               notificado_2,
+               notificado_1,
+               notificado_vencido
         FROM ventas
     """)
 
@@ -290,57 +294,52 @@ def revisar_vencimientos():
         duracion = r[3]
         telefono = r[4]
         fecha_v = r[5]
-        estado = r[6]
 
-        # Aseguramos que fecha sea tipo date
+        notif_3 = r[6]
+        notif_2 = r[7]
+        notif_1 = r[8]
+        notif_v = r[9]
+
         if isinstance(fecha_v, str):
             fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
 
         dias_restantes = (fecha_v - hoy).days
 
-        # ================================
-        # ALERTA 3,2,1 DIAS (SOLO UNA VEZ)
-        # ================================
-        if dias_restantes in [3, 2, 1] and estado == "activo":
-
-            mensaje = f"""
+        mensaje = f"""
 Cliente: {cliente}
 Servicio: {servicio}
 Duración: {duracion} mes(es)
 Teléfono: {telefono}
-Vence en: {dias_restantes} día(s)
 Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
 """
 
-            enviar_telegram(mensaje.strip())
-
+        # ===== 3 DÍAS =====
+        if dias_restantes == 3 and not notif_3:
+            enviar_telegram("⚠ Faltan 3 días\n" + mensaje)
             cursor.execute(adaptar_query("""
-                UPDATE ventas
-                SET estado=?
-                WHERE codigo_venta=?
-            """), ("notificado", codigo))
+                UPDATE ventas SET notificado_3=1 WHERE codigo_venta=?
+            """), (codigo,))
 
-        # ================================
-        # VENCIDO (SOLO UNA VEZ)
-        # ================================
-        if dias_restantes < 0 and estado != "vencido":
-
-            mensaje = f"""
-Cliente: {cliente}
-Servicio: {servicio}
-Duración: {duracion} mes(es)
-Teléfono: {telefono}
-ESTADO: VENCIDO
-Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
-"""
-
-            enviar_telegram(mensaje.strip())
-
+        # ===== 2 DÍAS =====
+        if dias_restantes == 2 and not notif_2:
+            enviar_telegram("⚠ Faltan 2 días\n" + mensaje)
             cursor.execute(adaptar_query("""
-                UPDATE ventas
-                SET estado=?
-                WHERE codigo_venta=?
-            """), ("vencido", codigo))
+                UPDATE ventas SET notificado_2=1 WHERE codigo_venta=?
+            """), (codigo,))
+
+        # ===== 1 DÍA =====
+        if dias_restantes == 1 and not notif_1:
+            enviar_telegram("⚠ Vence mañana\n" + mensaje)
+            cursor.execute(adaptar_query("""
+                UPDATE ventas SET notificado_1=1 WHERE codigo_venta=?
+            """), (codigo,))
+
+        # ===== VENCIDO =====
+        if dias_restantes < 0 and not notif_v:
+            enviar_telegram("❌ VENCIDO\n" + mensaje)
+            cursor.execute(adaptar_query("""
+                UPDATE ventas SET notificado_vencido=1 WHERE codigo_venta=?
+            """), (codigo,))
 
     conexion.commit()
     conexion.close()
@@ -961,11 +960,16 @@ def renovar(codigo):
             url_comprobante = "/" + ruta_local
 
         # ================================
-        # ACTUALIZAR FECHA VENTA
+        # ACTUALIZAR FECHA Y RESET NOTIFICACIONES
         # ================================
         cursor.execute(adaptar_query("""
             UPDATE ventas
-            SET fecha_vencimiento=?, estado=?
+            SET fecha_vencimiento=?,
+                estado=?,
+                notificado_3=0,
+                notificado_2=0,
+                notificado_1=0,
+                notificado_vencido=0
             WHERE codigo_venta=?
         """), (
             nueva_fecha.strftime("%Y-%m-%d"),
