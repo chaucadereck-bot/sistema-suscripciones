@@ -269,6 +269,8 @@ def enviar_telegram(mensaje):
 # ======================================
 def revisar_vencimientos():
 
+    from datetime import datetime, timedelta
+
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
@@ -276,15 +278,17 @@ def revisar_vencimientos():
         SELECT codigo_venta, cliente, servicio,
                duracion_meses, telefono,
                fecha_vencimiento,
-               notificado_3,
-               notificado_2,
-               notificado_1,
-               notificado_vencido
+               COALESCE(notificado_3, FALSE),
+               COALESCE(notificado_2, FALSE),
+               COALESCE(notificado_1, FALSE),
+               COALESCE(notificado_vencido, FALSE)
         FROM ventas
     """)
 
     registros = cursor.fetchall()
-    hoy = datetime.today().date()
+
+    # Ecuador GMT-5
+    hoy = (datetime.utcnow() - timedelta(hours=5)).date()
 
     for r in registros:
 
@@ -295,13 +299,16 @@ def revisar_vencimientos():
         telefono = r[4]
         fecha_v = r[5]
 
-        notif_3 = r[6]
-        notif_2 = r[7]
-        notif_1 = r[8]
-        notif_v = r[9]
+        notif_3 = bool(r[6])
+        notif_2 = bool(r[7])
+        notif_1 = bool(r[8])
+        notif_v = bool(r[9])
+
+        if not fecha_v:
+            continue
 
         if isinstance(fecha_v, str):
-            fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
+            fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
 
         dias_restantes = (fecha_v - hoy).days
 
@@ -313,33 +320,29 @@ Teléfono: {telefono}
 Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
 """
 
-        # ===== 3 DÍAS =====
         if dias_restantes == 3 and not notif_3:
             enviar_telegram("⚠ Faltan 3 días\n" + mensaje)
             cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_3=1 WHERE codigo_venta=?
-            """), (codigo,))
+                UPDATE ventas SET notificado_3=? WHERE codigo_venta=?
+            """), (True, codigo))
 
-        # ===== 2 DÍAS =====
-        if dias_restantes == 2 and not notif_2:
+        elif dias_restantes == 2 and not notif_2:
             enviar_telegram("⚠ Faltan 2 días\n" + mensaje)
             cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_2=1 WHERE codigo_venta=?
-            """), (codigo,))
+                UPDATE ventas SET notificado_2=? WHERE codigo_venta=?
+            """), (True, codigo))
 
-        # ===== 1 DÍA =====
-        if dias_restantes == 1 and not notif_1:
+        elif dias_restantes == 1 and not notif_1:
             enviar_telegram("⚠ Vence mañana\n" + mensaje)
             cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_1=1 WHERE codigo_venta=?
-            """), (codigo,))
+                UPDATE ventas SET notificado_1=? WHERE codigo_venta=?
+            """), (True, codigo))
 
-        # ===== VENCIDO =====
-        if dias_restantes < 0 and not notif_v:
+        elif dias_restantes < 0 and not notif_v:
             enviar_telegram("❌ VENCIDO\n" + mensaje)
             cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_vencido=1 WHERE codigo_venta=?
-            """), (codigo,))
+                UPDATE ventas SET notificado_vencido=? WHERE codigo_venta=?
+            """), (True, codigo))
 
     conexion.commit()
     conexion.close()
