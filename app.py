@@ -64,6 +64,11 @@ def obtener_conexion():
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
+    
+
+
+print("DATABASE_URL RAW:")
+print(repr(os.getenv("DATABASE_URL")))
 
 
 # ======================================
