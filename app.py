@@ -451,6 +451,14 @@ def cron():
         return "Cron ejecutado correctamente"
     except Exception as e:
         return f"Error en cron: {e}"
+    
+@app.route("/debug-env")
+def debug_env():
+    return f"""
+    DATABASE_URL: {os.getenv('DATABASE_URL')}
+    SUPABASE_URL: {os.getenv('SUPABASE_URL')}
+    SUPABASE_KEY: {'SET' if os.getenv('SUPABASE_KEY') else 'NOT SET'}
+    """
 
 
 # ======================================
