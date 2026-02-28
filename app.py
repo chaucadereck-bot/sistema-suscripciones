@@ -54,10 +54,12 @@ def obtener_conexion():
     database_url = os.getenv("DATABASE_URL")
 
     if database_url:
-        # PostgreSQL
-        return psycopg2.connect(database_url)
+        return psycopg2.connect(
+            database_url,
+            connect_timeout=10,
+            sslmode="require"
+        )
     else:
-        # SQLite
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
@@ -451,14 +453,6 @@ def cron():
         return "Cron ejecutado correctamente"
     except Exception as e:
         return f"Error en cron: {e}"
-    
-@app.route("/debug-env")
-def debug_env():
-    return f"""
-    DATABASE_URL: {os.getenv('DATABASE_URL')}
-    SUPABASE_URL: {os.getenv('SUPABASE_URL')}
-    SUPABASE_KEY: {'SET' if os.getenv('SUPABASE_KEY') else 'NOT SET'}
-    """
 
 
 # ======================================
