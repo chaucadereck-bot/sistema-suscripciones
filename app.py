@@ -516,10 +516,10 @@ def index():
 
 
 # ======================================
-# RENOVAR CLIENTE
+# AGREGAR CLIENTE
 # ======================================
-@app.route("/renovar/<codigo>", methods=["GET", "POST"])
-def renovar(codigo):
+@app.route("/agregar", methods=["GET", "POST"])
+def agregar():
 
     if "usuario" not in session:
         return redirect("/login")
@@ -527,180 +527,197 @@ def renovar(codigo):
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    # ================================
-    # OBTENER DATOS ACTUALES
-    # ================================
-    cursor.execute(adaptar_query("""
-        SELECT cliente, servicio, fecha_vencimiento, duracion_meses
-        FROM ventas
-        WHERE codigo_venta=?
-    """), (codigo,))
+    if request.method == "POST":
 
-    venta = cursor.fetchone()
+        try:
 
-    if not venta:
-        conexion.close()
-        return redirect("/")
+            codigo_venta = request.form["codigo_venta"].strip()
+            fecha_input = request.form["fecha"]
 
-    cliente, id_servicio, fecha_v, meses = venta
+            # Normalizar fecha
+            if "/" in fecha_input:
+                fecha_obj = datetime.strptime(fecha_input, "%d/%m/%Y")
+            else:
+                fecha_obj = datetime.strptime(fecha_input, "%Y-%m-%d")
 
-    # ================================
-    # GET → FORMULARIO
-    # ================================
-    if request.method == "GET":
+            fecha = fecha_obj.strftime("%Y-%m-%d")
 
-        cursor.execute("""
-            SELECT DISTINCT nombre_tercero
-            FROM pagos_terceros
-            WHERE nombre_tercero IS NOT NULL
-            ORDER BY nombre_tercero
-        """)
-        proveedores = cursor.fetchall()
+            cliente = request.form["cliente"].strip()
+            telefono = request.form["telefono"].strip()
+            id_servicio = request.form["servicio"]
+            correo_cuenta = request.form["correo_cuenta"].strip()
 
-        conexion.close()
+            proveedor_select = request.form.get("proveedor_select")
+            proveedor_nuevo = request.form.get("proveedor_nuevo")
 
-        return render_template(
-            "renovar.html",
-            codigo=codigo,
-            cliente=cliente,
-            proveedores=proveedores
-        )
+            comprobante = request.files.get("comprobante_banco")
+            nota = request.files.get("nota_venta")
 
-    # ================================
-    # POST → PROCESAR RENOVACIÓN
-    # ================================
-    try:
+            # Validar comprobante obligatorio
+            if not comprobante or comprobante.filename == "":
+                conexion.close()
+                return "Debe subir comprobante bancario"
 
-        proveedor_select = request.form.get("proveedor_select")
-        proveedor_nuevo = request.form.get("proveedor_nuevo")
-        monto_tercero = float(request.form.get("monto_tercero"))
+            # Determinar proveedor final
+            if proveedor_nuevo and proveedor_nuevo.strip():
+                proveedor_final = proveedor_nuevo.strip()
+            elif proveedor_select:
+                proveedor_final = proveedor_select
+            else:
+                proveedor_final = "Proveedor Automático"
 
-        comprobante = request.files.get("comprobante_banco")
+            # Obtener datos del servicio
+            cursor.execute(adaptar_query("""
+                SELECT precio_base, costo_base, duracion_meses
+                FROM servicios
+                WHERE id_servicio=?
+            """), (id_servicio,))
 
-        if not comprobante or comprobante.filename == "":
-            raise Exception("Debe subir comprobante.")
+            servicio = cursor.fetchone()
 
-        if proveedor_nuevo and proveedor_nuevo.strip():
-            proveedor_final = proveedor_nuevo.strip()
-        else:
-            proveedor_final = proveedor_select
+            if not servicio:
+                conexion.close()
+                return redirect("/")
 
-        # Calcular nueva fecha vencimiento
-        if isinstance(fecha_v, str):
-            fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
+            precio_base = float(servicio[0])
+            costo_base = float(servicio[1])
+            duracion = int(servicio[2])
 
-        nueva_fecha = fecha_v + relativedelta(months=int(meses))
-        hoy = datetime.today().strftime("%Y-%m-%d")
+            fecha_vencimiento = fecha_obj + relativedelta(months=duracion)
+            utilidad = precio_base - costo_base
 
-        # ================================
-        # GUARDAR ARCHIVO (STORAGE)
-        # ================================
-        nombre_archivo = f"{codigo}_{int(time.time())}_{comprobante.filename}"
+            # ================================
+            # GUARDAR ARCHIVOS
+            # ================================
+            nombre_banco = f"{codigo_venta}_banco_{comprobante.filename}"
+            url_banco = None
+            url_nota = None
 
-        if USANDO_SUPABASE:
+            if USANDO_SUPABASE:
 
-            try:
-                ruta_storage = f"renovaciones/{nombre_archivo}"
-                contenido = comprobante.read()
-
-                response = supabase.storage.from_("comprobantes").upload(
-                    ruta_storage,
-                    contenido
+                ruta_banco = f"venta_banco/{nombre_banco}"
+                supabase.storage.from_("comprobantes").upload(
+                    ruta_banco,
+                    comprobante.read()
                 )
+                url_banco = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_banco}"
 
-                print("STORAGE RESPONSE:", response)
+                if nota and nota.filename:
+                    nombre_nota = f"{codigo_venta}_nota_{nota.filename}"
+                    ruta_nota = f"venta_nota/{nombre_nota}"
+                    supabase.storage.from_("comprobantes").upload(
+                        ruta_nota,
+                        nota.read()
+                    )
+                    url_nota = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_nota}"
 
-                url_comprobante = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+            else:
 
-            except Exception as e:
-                print("ERROR REAL STORAGE:", e)
-                raise Exception(f"Error real en storage: {e}")
+                os.makedirs("uploads/venta_banco", exist_ok=True)
+                os.makedirs("uploads/venta_nota", exist_ok=True)
 
-        else:
+                ruta_local_banco = os.path.join("uploads/venta_banco", nombre_banco)
+                comprobante.save(ruta_local_banco)
+                url_banco = "/" + ruta_local_banco
 
-            os.makedirs("uploads/renovaciones", exist_ok=True)
-            ruta_local = os.path.join("uploads/renovaciones", nombre_archivo)
-            comprobante.save(ruta_local)
-            url_comprobante = "/" + ruta_local
+                if nota and nota.filename:
+                    nombre_nota = f"{codigo_venta}_nota_{nota.filename}"
+                    ruta_local_nota = os.path.join("uploads/venta_nota", nombre_nota)
+                    nota.save(ruta_local_nota)
+                    url_nota = "/" + ruta_local_nota
 
-        # ================================
-        # ACTUALIZAR FECHA Y RESET NOTIFICACIONES
-        # ================================
-        cursor.execute(adaptar_query("""
-            UPDATE ventas
-            SET fecha_vencimiento=?,
-                estado=?,
-                notificado_3=0,
-                notificado_2=0,
-                notificado_1=0,
-                notificado_vencido=0
-            WHERE codigo_venta=?
-        """), (
-            nueva_fecha.strftime("%Y-%m-%d"),
-            "activo",
-            codigo
-        ))
+            # ================================
+            # INSERTAR EN VENTAS
+            # ================================
+            cursor.execute(adaptar_query("""
+                INSERT INTO ventas
+                (codigo_venta, fecha, duracion_meses, fecha_vencimiento,
+                 cliente, telefono, servicio, precio, correo_cuenta, estado)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            """), (
+                codigo_venta,
+                fecha,
+                duracion,
+                fecha_vencimiento.strftime("%Y-%m-%d"),
+                cliente,
+                telefono,
+                id_servicio,
+                precio_base,
+                correo_cuenta,
+                "activo"
+            ))
 
-        # ================================
-        # OBTENER DATOS SERVICIO
-        # ================================
-        cursor.execute(adaptar_query("""
-            SELECT precio_base, costo_base
-            FROM servicios
-            WHERE id_servicio=?
-        """), (id_servicio,))
+            # ================================
+            # INSERTAR EN VENTAS_CONTABLES
+            # ================================
+            id_contable = f"{codigo_venta}-{int(time.time())}"
 
-        precio_base, costo_base = cursor.fetchone()
-        utilidad = precio_base - costo_base
+            cursor.execute(adaptar_query("""
+                INSERT INTO ventas_contables
+                (id_contable, codigo_venta, fecha, id_servicio,
+                 precio_venta, costo_base, utilidad)
+                VALUES (?,?,?,?,?,?,?)
+            """), (
+                id_contable,
+                codigo_venta,
+                fecha,
+                id_servicio,
+                precio_base,
+                costo_base,
+                utilidad
+            ))
 
-        # ================================
-        # INSERTAR NUEVO MOVIMIENTO CONTABLE
-        # ================================
-        id_contable = f"{codigo}-{int(time.time())}"
+            # ================================
+            # INSERTAR EN PAGOS_TERCEROS
+            # ================================
+            id_pago = f"PAG-{id_contable}"
 
-        cursor.execute(adaptar_query("""
-            INSERT INTO ventas_contables
-            (id_contable, codigo_venta, fecha, id_servicio,
-             precio_venta, costo_base, utilidad)
-            VALUES (?,?,?,?,?,?,?)
-        """), (
-            id_contable,
-            codigo,
-            hoy,
-            id_servicio,
-            precio_base,
-            costo_base,
-            utilidad
-        ))
+            cursor.execute(adaptar_query("""
+                INSERT INTO pagos_terceros
+                (id_pago, id_contable, fecha_pago,
+                 monto_usdt, nombre_tercero, comprobante_binance)
+                VALUES (?,?,?,?,?,?)
+            """), (
+                id_pago,
+                id_contable,
+                fecha,
+                costo_base,
+                proveedor_final,
+                url_banco
+            ))
 
-        # ================================
-        # INSERTAR PAGO TERCERO
-        # ================================
-        id_pago = f"PAG-{id_contable}"
+            conexion.commit()
+            conexion.close()
 
-        cursor.execute(adaptar_query("""
-            INSERT INTO pagos_terceros
-            (id_pago, id_contable, fecha_pago,
-             monto_usdt, nombre_tercero, comprobante_binance)
-            VALUES (?,?,?,?,?,?)
-        """), (
-            id_pago,
-            id_contable,
-            hoy,
-            monto_tercero,
-            proveedor_final,
-            url_comprobante
-        ))
+            return redirect("/ventas_contables")
 
-        conexion.commit()
-        conexion.close()
+        except Exception as e:
+            conexion.rollback()
+            conexion.close()
+            return f"Error al agregar cliente: {e}"
 
-        return redirect("/")
+    # ================================
+    # GET → Cargar formulario
+    # ================================
+    cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
+    servicios = cursor.fetchall()
 
-    except Exception as e:
-        conexion.rollback()
-        conexion.close()
-        return f"Error en renovación: {e}"
+    cursor.execute("""
+        SELECT DISTINCT nombre_tercero
+        FROM pagos_terceros
+        WHERE nombre_tercero IS NOT NULL
+        ORDER BY nombre_tercero
+    """)
+    proveedores = cursor.fetchall()
+
+    conexion.close()
+
+    return render_template(
+        "agregar.html",
+        servicios=servicios,
+        proveedores=proveedores,
+        codigo=generar_codigo()
+    )
 
 
 
@@ -931,19 +948,28 @@ def renovar(codigo):
         hoy = datetime.today().strftime("%Y-%m-%d")
 
         # ================================
-        # GUARDAR ARCHIVO
+        # GUARDAR ARCHIVO (STORAGE)
         # ================================
         nombre_archivo = f"{codigo}_{int(time.time())}_{comprobante.filename}"
 
         if USANDO_SUPABASE:
 
-            ruta_storage = f"renovaciones/{nombre_archivo}"
-            supabase.storage.from_("comprobantes").upload(
-                ruta_storage,
-                comprobante.read()
-            )
+            try:
+                ruta_storage = f"renovaciones/{nombre_archivo}"
+                contenido = comprobante.read()
 
-            url_comprobante = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+                response = supabase.storage.from_("comprobantes").upload(
+                    ruta_storage,
+                    contenido
+                )
+
+                print("STORAGE RESPONSE:", response)
+
+                url_comprobante = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+
+            except Exception as e:
+                print("ERROR REAL STORAGE:", e)
+                raise Exception(f"Error real en storage: {e}")
 
         else:
 
@@ -1402,26 +1428,6 @@ def editar_servicio(id_servicio):
     conexion.close()
 
     return render_template("servicio_form.html", modo="editar", servicio=servicio)
-
-
-@app.route("/test-storage")
-def test_storage():
-
-    if not USANDO_SUPABASE:
-        return "No está usando Supabase"
-
-    try:
-        buckets = supabase.storage.list_buckets()
-        print("BUCKETS:", buckets)
-
-        archivos = supabase.storage.from_("comprobantes").list()
-        print("ARCHIVOS:", archivos)
-
-        return "Storage funciona correctamente"
-
-    except Exception as e:
-        print("ERROR STORAGE:", e)
-        return f"Error en storage: {e}"
 
 
 # ======================================
