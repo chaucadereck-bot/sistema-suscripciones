@@ -1235,67 +1235,93 @@ def subir_archivo(tipo, identificador):
         import uuid
         nombre_archivo = f"{identificador}_{uuid.uuid4().hex}_{archivo.filename}"
 
-        # ======================================
-        # SUBIDA A STORAGE
-        # ======================================
-        if USANDO_SUPABASE:
-
-            try:
-
-                ruta_storage = f"{tipo}/{nombre_archivo}"
-                contenido = archivo.read()
-
-                headers = {
-                    "apikey": SUPABASE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_KEY}",
-                    "Content-Type": "application/octet-stream"
-                }
-
-                url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}?upsert=true"
-
-                response = requests.put(
-                    url_upload,
-                    headers=headers,
-                    data=contenido,
-                    timeout=30
-                )
-
-                if response.status_code not in [200, 201]:
-                    raise Exception(response.text)
-
-                url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
-
-            except Exception as e:
-                print("ERROR REAL STORAGE:", e)
-                raise Exception(f"Error subiendo archivo: {e}")
+        ruta_storage = f"{tipo}/{nombre_archivo}"
+        contenido = archivo.read()
 
         # ======================================
-        # ACTUALIZACIÓN EN BASE DE DATOS
+        # BUSCAR ARCHIVO ANTERIOR
         # ======================================
         conexion = obtener_conexion()
         cursor = conexion.cursor()
 
-        # Validar que exista el registro
         cursor.execute(adaptar_query(f"""
-            SELECT {config['id']}
+            SELECT {config['campo']}
             FROM {config['tabla']}
             WHERE {config['id']}=?
         """), (identificador,))
 
-        if not cursor.fetchone():
+        registro = cursor.fetchone()
+
+        if not registro:
             conexion.close()
             return "Registro no encontrado", 404
 
-        # Actualizar campo correspondiente
+        archivo_anterior = registro[0]
+
+        # ======================================
+        # ELIMINAR ARCHIVO ANTERIOR
+        # ======================================
+        if archivo_anterior and USANDO_SUPABASE:
+
+            try:
+                ruta_vieja = archivo_anterior.split(
+                    "/storage/v1/object/public/comprobantes/"
+                )[1]
+
+                headers = {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_KEY}"
+                }
+
+                requests.delete(
+                    f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_vieja}",
+                    headers=headers
+                )
+
+            except Exception as e:
+                print("Error eliminando archivo anterior:", e)
+
+        # ======================================
+        # SUBIR ARCHIVO NUEVO
+        # ======================================
+        if USANDO_SUPABASE:
+
+            headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/octet-stream"
+            }
+
+            url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}"
+
+            response = requests.put(
+                url_upload,
+                headers=headers,
+                data=contenido,
+                timeout=30
+            )
+
+            if response.status_code not in [200, 201]:
+                raise Exception(response.text)
+
+            url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+
+        else:
+            os.makedirs(f"uploads/{tipo}", exist_ok=True)
+            ruta_local = os.path.join("uploads", tipo, nombre_archivo)
+            with open(ruta_local, "wb") as f:
+                f.write(contenido)
+
+            url_archivo = "/" + ruta_local
+
+        # ======================================
+        # ACTUALIZAR BASE DE DATOS
+        # ======================================
         cursor.execute(adaptar_query(f"""
             UPDATE {config['tabla']}
             SET {config['campo']}=?
             WHERE {config['id']}=?
         """), (url_archivo, identificador))
-
-        if cursor.rowcount == 0:
-            conexion.close()
-            return "No se actualizó ninguna fila", 400
 
         conexion.commit()
         conexion.close()
