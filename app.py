@@ -17,8 +17,8 @@ app = Flask(__name__)
 # CONFIGURACIÓN SUPABASE
 # ==========================
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
 
 supabase = None
 USANDO_SUPABASE = False
