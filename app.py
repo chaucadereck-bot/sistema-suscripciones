@@ -1229,16 +1229,15 @@ def subir_archivo(tipo, identificador):
 
             contenido = archivo.read()
 
-            # Subir archivo a Supabase
+            # Subir archivo a Supabase Storage
             supabase.storage.from_("comprobantes").upload(
                 ruta_storage,
                 contenido,
-                {"content-type": archivo.content_type}
+                {"content-type": "application/octet-stream"}
             )
 
-            # Obtener URL pública correcta
-            url_data = supabase.storage.from_("comprobantes").get_public_url(ruta_storage)
-            url_archivo = url_data["publicURL"]
+            # Generar URL pública manual
+            url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
         else:
 
