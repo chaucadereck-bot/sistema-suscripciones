@@ -1162,23 +1162,25 @@ def ventas_contables():
     cursor = conexion.cursor()
 
     cursor.execute(adaptar_query("""
-        SELECT 
-            vc.id_contable,
-            vc.codigo_venta,
-            v.cliente,
-            vc.fecha,
-            s.nombre_servicio,
-            vc.precio_venta,
-            vc.costo_base,
-            vc.utilidad,
-            vc.nota_venta,
-            vc.comprobante_banco
-        FROM ventas_contables vc
-        JOIN ventas v
-            ON vc.codigo_venta = v.codigo_venta
-        JOIN servicios s
-            ON vc.id_servicio = s.id_servicio
-        ORDER BY vc.fecha DESC
+    SELECT 
+        vc.id_contable,
+        vc.codigo_venta,
+        v.cliente,
+        vc.fecha,
+        s.nombre_servicio,
+        vc.precio_venta,
+        vc.costo_base,
+        vc.utilidad,
+        vc.nota_venta,
+        pt.comprobante_binance
+    FROM ventas_contables vc
+    JOIN ventas v
+        ON vc.codigo_venta = v.codigo_venta
+    JOIN servicios s
+        ON vc.id_servicio = s.id_servicio
+    LEFT JOIN pagos_terceros pt
+        ON vc.id_contable = pt.id_contable
+    ORDER BY vc.fecha DESC
     """))
 
     datos = cursor.fetchall()
