@@ -20,11 +20,21 @@ app = Flask(__name__)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-USANDO_SUPABASE = SUPABASE_URL is not None and SUPABASE_KEY is not None
+supabase = None
+USANDO_SUPABASE = False
 
-if USANDO_SUPABASE:
-    from supabase import create_client
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+try:
+    if SUPABASE_URL and SUPABASE_KEY:
+        from supabase import create_client
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        USANDO_SUPABASE = True
+        print("Supabase conectado correctamente")
+    else:
+        print("Supabase no configurado")
+except Exception as e:
+    print("Error conectando a Supabase:", e)
+    supabase = None
+    USANDO_SUPABASE = False
 
 
 app.secret_key = "clave_super_secreta_2026" 
