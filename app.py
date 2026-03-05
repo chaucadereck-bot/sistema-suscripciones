@@ -971,12 +971,23 @@ def renovar(codigo):
                 ruta_storage = f"renovaciones/{nombre_archivo}"
                 contenido = comprobante.read()
 
-                response = supabase.storage.from_("comprobantes").upload(
-                    ruta_storage,
-                    contenido
+                headers = {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_KEY}",
+                    "Content-Type": "application/octet-stream"
+                }
+
+                url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}?upsert=true"
+
+                response = requests.put(
+                    url_upload,
+                    headers=headers,
+                    data=contenido,
+                    timeout=30
                 )
 
-                print("STORAGE RESPONSE:", response)
+                if response.status_code not in [200, 201]:
+                    raise Exception(response.text)
 
                 url_comprobante = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
@@ -1227,28 +1238,34 @@ def subir_archivo(tipo, identificador):
         # ======================================
         if USANDO_SUPABASE:
 
-            ruta_storage = f"{tipo}/{nombre_archivo}"
-            contenido = archivo.read()
+            try:
 
-            headers = {
-                "apikey": SUPABASE_KEY,
-                "Authorization": f"Bearer {SUPABASE_KEY}",
-                "Content-Type": "application/octet-stream"
-            }
+                ruta_storage = f"{tipo}/{nombre_archivo}"
+                contenido = archivo.read()
 
-            url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}"
+                headers = {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_KEY}",
+                    "Content-Type": "application/octet-stream"
+                }
 
-            response = requests.put(
-                url_upload,
-                headers=headers,
-                data=contenido,
-                timeout=30
-            )
+                url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}?upsert=true"
 
-            if response.status_code not in [200, 201]:
-                raise Exception(f"Error subiendo archivo: {response.text}")
+                response = requests.put(
+                    url_upload,
+                    headers=headers,
+                    data=contenido,
+                    timeout=30
+                )
 
-            url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+                if response.status_code not in [200, 201]:
+                    raise Exception(response.text)
+
+                url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+
+            except Exception as e:
+                print("ERROR REAL STORAGE:", e)
+                raise Exception(f"Error subiendo archivo: {e}")
 
         # ======================================
         # ACTUALIZACIÓN EN BASE DE DATOS
