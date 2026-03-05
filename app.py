@@ -7,6 +7,7 @@ import psycopg2
 import requests
 import threading
 import time
+import traceback
 
 
 
@@ -1216,12 +1217,18 @@ def subir_archivo(tipo, identificador):
 
             ruta_storage = f"{tipo}/{nombre_archivo}"
 
+            contenido = archivo.read()
+
+            # Subir archivo a Supabase
             supabase.storage.from_("comprobantes").upload(
                 ruta_storage,
-                archivo.read()
+                contenido,
+                {"content-type": archivo.content_type}
             )
 
-            url_archivo = supabase.storage.from_("comprobantes").get_public_url(ruta_storage)
+            # Obtener URL pública correcta
+            url_data = supabase.storage.from_("comprobantes").get_public_url(ruta_storage)
+            url_archivo = url_data["publicURL"]
 
         else:
 
@@ -1267,6 +1274,7 @@ def subir_archivo(tipo, identificador):
         return redirect(request.referrer)
 
     except Exception as e:
+        print(traceback.format_exc())
         return f"Error subiendo archivo: {e}", 500
 
 
