@@ -1226,28 +1226,26 @@ def subir_archivo(tipo, identificador):
         if USANDO_SUPABASE:
 
             ruta_storage = f"{tipo}/{nombre_archivo}"
-
             contenido = archivo.read()
 
-            # Subir archivo a Supabase Storage
-            supabase.storage.from_("comprobantes").upload(
-                ruta_storage,
-                contenido,
-                {"content-type": "application/octet-stream"}
+            headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/octet-stream"
+            }
+
+            url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}"
+
+            response = requests.post(
+                url_upload,
+                headers=headers,
+                data=contenido
             )
 
-            # Generar URL pública manual
+            if response.status_code not in [200, 201]:
+                raise Exception(f"Error subiendo archivo: {response.text}")
+
             url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
-
-        else:
-
-            carpeta = f"uploads/{tipo}"
-            os.makedirs(carpeta, exist_ok=True)
-
-            ruta_local = os.path.join(carpeta, nombre_archivo)
-            archivo.save(ruta_local)
-
-            url_archivo = f"/uploads/{tipo}/{nombre_archivo}"
 
         # ======================================
         # ACTUALIZACIÓN EN BASE DE DATOS
