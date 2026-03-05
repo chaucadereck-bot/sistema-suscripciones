@@ -1009,10 +1009,10 @@ def renovar(codigo):
             UPDATE ventas
             SET fecha_vencimiento=?,
                 estado=?,
-                notificado_3=0,
-                notificado_2=0,
-                notificado_1=0,
-                notificado_vencido=0
+                notificado_3=FALSE,
+                notificado_2=FALSE,
+                notificado_1=FALSE,
+                notificado_vencido=FALSE
             WHERE codigo_venta=?
         """), (
             nueva_fecha.strftime("%Y-%m-%d"),
