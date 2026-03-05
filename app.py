@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 # ==========================
 # CONFIGURACIÓN SUPABASE
-# ==========================
+# ==========================F
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
@@ -696,7 +696,7 @@ def agregar():
                 fecha,
                 costo_base,
                 proveedor_final,
-                url_banco
+                None
             ))
 
             conexion.commit()
