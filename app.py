@@ -526,6 +526,7 @@ def index():
     )
 
 
+
 # ======================================
 # AGREGAR CLIENTE
 # ======================================
@@ -539,7 +540,6 @@ def agregar():
     cursor = conexion.cursor()
 
     if request.method == "POST":
-
         try:
 
             codigo_venta = request.form["codigo_venta"].strip()
@@ -564,12 +564,11 @@ def agregar():
             comprobante = request.files.get("comprobante_banco")
             nota = request.files.get("nota_venta")
 
-            # Validar comprobante obligatorio
             if not comprobante or comprobante.filename == "":
                 conexion.close()
                 return "Debe subir comprobante bancario"
 
-            # Determinar proveedor final
+            # Determinar proveedor
             if proveedor_nuevo and proveedor_nuevo.strip():
                 proveedor_final = proveedor_nuevo.strip()
             elif proveedor_select:
@@ -606,36 +605,39 @@ def agregar():
 
             if USANDO_SUPABASE:
 
-                ruta_banco = f"venta_banco/{nombre_banco}"
-                supabase.storage.from_("comprobantes").upload(
-                    ruta_banco,
-                    comprobante.read()
-                )
-                url_banco = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_banco}"
+                try:
+                    ruta_storage = f"venta_banco/{nombre_banco}"
+                    contenido = comprobante.read()
 
-                if nota and nota.filename:
-                    nombre_nota = f"{codigo_venta}_nota_{nota.filename}"
-                    ruta_nota = f"venta_nota/{nombre_nota}"
-                    supabase.storage.from_("comprobantes").upload(
-                        ruta_nota,
-                        nota.read()
+                    headers = {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_KEY}",
+                        "Content-Type": "application/octet-stream"
+                    }
+
+                    url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}"
+
+                    response = requests.put(
+                        url_upload,
+                        headers=headers,
+                        data=contenido,
+                        timeout=30
                     )
-                    url_nota = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_nota}"
+
+                    if response.status_code not in [200, 201]:
+                        raise Exception(response.text)
+
+                    url_banco = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
+
+                except Exception as e:
+                    print("ERROR REAL STORAGE:", e)
+                    raise Exception(f"Error real en storage: {e}")
 
             else:
-
                 os.makedirs("uploads/venta_banco", exist_ok=True)
-                os.makedirs("uploads/venta_nota", exist_ok=True)
-
-                ruta_local_banco = os.path.join("uploads/venta_banco", nombre_banco)
-                comprobante.save(ruta_local_banco)
-                url_banco = "/" + ruta_local_banco
-
-                if nota and nota.filename:
-                    nombre_nota = f"{codigo_venta}_nota_{nota.filename}"
-                    ruta_local_nota = os.path.join("uploads/venta_nota", nombre_nota)
-                    nota.save(ruta_local_nota)
-                    url_nota = "/" + ruta_local_nota
+                ruta_local = os.path.join("uploads/venta_banco", nombre_banco)
+                comprobante.save(ruta_local)
+                url_banco = "/" + ruta_local
 
             # ================================
             # INSERTAR EN VENTAS
