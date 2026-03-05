@@ -1305,7 +1305,6 @@ def pagos_terceros():
 # ======================================
 # GESTIÓN DE SERVICIOS (SaaS Profesional)
 # ======================================
-
 @app.route("/servicios")
 def listar_servicios():
 
