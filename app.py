@@ -1236,10 +1236,11 @@ def subir_archivo(tipo, identificador):
 
             url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}"
 
-            response = requests.post(
+            response = requests.put(
                 url_upload,
                 headers=headers,
-                data=contenido
+                data=contenido,
+                timeout=30
             )
 
             if response.status_code not in [200, 201]:
