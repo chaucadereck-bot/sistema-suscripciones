@@ -5,5 +5,4 @@ gunicorn==21.2.0
 requests==2.31.0
 pandas
 openpyxl
-supabase==2.3.4
-httpx==0.24.1
+supabase==1.0.4
