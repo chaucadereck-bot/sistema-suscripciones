@@ -615,7 +615,7 @@ def agregar():
                         "Content-Type": "application/octet-stream"
                     }
 
-                    url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}"
+                    url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}?upsert=true"
 
                     response = requests.put(
                         url_upload,
