@@ -8,14 +8,15 @@ import requests
 import threading
 import time
 import traceback
-
+from PIL import Image
+import io
 
 
 app = Flask(__name__)
 
 # ==========================
 # CONFIGURACIÓN SUPABASE
-# ==========================F
+# ==========================
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
@@ -280,6 +281,43 @@ def enviar_telegram(mensaje):
         )
     except Exception:
         pass
+   
+
+# ======================================
+# CALCULAR STORAGE USADO
+# ======================================
+def calcular_storage():
+
+    total_bytes = 0
+
+    try:
+
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}"
+        }
+
+        url = f"{SUPABASE_URL}/storage/v1/object/list/comprobantes"
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json={"prefix": ""}
+        )
+
+        archivos = response.json()
+
+        for archivo in archivos:
+            if "metadata" in archivo and "size" in archivo["metadata"]:
+                total_bytes += int(archivo["metadata"]["size"])
+
+    except Exception as e:
+        print("Error calculando storage:", e)
+
+    usado_mb = round(total_bytes / (1024 * 1024), 2)
+    disponible_mb = round(50 - usado_mb, 2)
+
+    return usado_mb, disponible_mb
 
 
 # ======================================
@@ -517,13 +555,17 @@ def index():
 
     conexion.close()
 
+    usado_mb, disponible_mb = calcular_storage()
+
     return render_template(
         "index.html",
         datos=datos_con_alerta,
         total_activos=activos,
         total_vencidos=vencidos,
-        total_por_vencer=por_vencer
-    )
+        total_por_vencer=por_vencer,
+        usado_storage=usado_mb,
+        disponible_storage=disponible_mb
+    ) 
 
 
 
@@ -1232,11 +1274,31 @@ def subir_archivo(tipo, identificador):
 
     try:
 
-        import uuid
-        nombre_archivo = f"{identificador}_{uuid.uuid4().hex}_{archivo.filename}"
+        extension = archivo.filename.split(".")[-1].lower()
+
+        nombre_archivo = f"{identificador}.{extension}"
 
         ruta_storage = f"{tipo}/{nombre_archivo}"
-        contenido = archivo.read()
+
+        # ======================================
+        # OPTIMIZAR IMAGEN SI ES FOTO
+        # ======================================
+        if extension in ["jpg", "jpeg", "png"]:
+
+            archivo_optimizado = optimizar_imagen(archivo)
+            contenido = archivo_optimizado.read()
+
+        else:
+
+            contenido = archivo.read()
+
+        # ======================================
+        # LIMITE DE TAMAÑO 150KB
+        # ======================================
+        MAX_FILE_SIZE = 150 * 1024
+
+        if len(contenido) > MAX_FILE_SIZE:
+            return "El comprobante supera el límite de 150KB", 400
 
         # ======================================
         # BUSCAR ARCHIVO ANTERIOR
@@ -1259,24 +1321,25 @@ def subir_archivo(tipo, identificador):
         archivo_anterior = registro[0]
 
         # ======================================
-        # ELIMINAR ARCHIVO ANTERIOR
+        # ELIMINAR ARCHIVO ANTERIOR (SEGURO)
         # ======================================
         if archivo_anterior and USANDO_SUPABASE:
 
             try:
-                ruta_vieja = archivo_anterior.split(
-                    "/storage/v1/object/public/comprobantes/"
-                )[1]
 
-                headers = {
-                    "apikey": SUPABASE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_KEY}"
-                }
+                if "/comprobantes/" in archivo_anterior:
 
-                requests.delete(
-                    f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_vieja}",
-                    headers=headers
-                )
+                    ruta_vieja = archivo_anterior.split("/comprobantes/")[1]
+
+                    headers = {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_KEY}"
+                    }
+
+                    requests.delete(
+                        f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_vieja}",
+                        headers=headers
+                    )
 
             except Exception as e:
                 print("Error eliminando archivo anterior:", e)
@@ -1307,8 +1370,10 @@ def subir_archivo(tipo, identificador):
             url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
         else:
+
             os.makedirs(f"uploads/{tipo}", exist_ok=True)
             ruta_local = os.path.join("uploads", tipo, nombre_archivo)
+
             with open(ruta_local, "wb") as f:
                 f.write(contenido)
 
@@ -1331,6 +1396,48 @@ def subir_archivo(tipo, identificador):
     except Exception as e:
         print(traceback.format_exc())
         return f"Error subiendo archivo: {e}", 500
+    
+
+# ======================================
+# OPTIMIZAR IMAGEN (COMPROBANTES)
+# ======================================
+def optimizar_imagen(archivo):
+
+    try:
+        archivo.seek(0)
+        imagen = Image.open(archivo)
+
+        # convertir PNG o formatos especiales
+        if imagen.mode in ("RGBA", "P"):
+            imagen = imagen.convert("RGB")
+
+        # ancho ideal para comprobantes
+        max_ancho = 1000
+
+        if imagen.width > max_ancho:
+            proporcion = max_ancho / float(imagen.width)
+            nuevo_alto = int(imagen.height * proporcion)
+
+            imagen = imagen.resize((max_ancho, nuevo_alto), Image.LANCZOS)
+
+        buffer = io.BytesIO()
+
+        # compresión optimizada
+        imagen.save(
+            buffer,
+            format="JPEG",
+            quality=60,
+            optimize=True,
+            progressive=True
+        )
+
+        buffer.seek(0)
+
+        return buffer
+
+    except Exception:
+        archivo.seek(0)
+        return archivo
 
 
 # ======================================
