@@ -84,13 +84,82 @@ print(repr(os.getenv("DATABASE_URL")))
 
 
 # ======================================
+# DETECTAR TIPO DE BASE DE DATOS
+# ======================================
+def es_postgres():
+    return os.getenv("DATABASE_URL") is not None
+
+
+# ======================================
 # FUNCIÓN PARA ADAPTAR PLACEHOLDERS
 # ======================================
-
 def adaptar_query(query):
     if es_postgres():
         return query.replace("?", "%s")
     return query
+
+
+# ======================================
+# CREAR TABLA PRINCIPAL + MIGRACIONES
+# ======================================
+def crear_tabla():
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    # ======================================
+    # CREAR TABLA PRINCIPAL
+    # ======================================
+    cursor.execute(adaptar_query("""
+        CREATE TABLE IF NOT EXISTS ventas (
+            codigo_venta VARCHAR(50) PRIMARY KEY,
+            fecha DATE,
+            duracion_meses INTEGER,
+            fecha_vencimiento DATE,
+            cliente VARCHAR(100),
+            telefono VARCHAR(50),
+            servicio VARCHAR(100),
+            precio NUMERIC,
+            correo_cuenta VARCHAR(100),
+            estado VARCHAR(50)
+        );
+    """))
+
+    # ======================================
+    # COLUMNAS DE NOTIFICACIÓN (MIGRACIÓN)
+    # ======================================
+    columnas_notificacion = [
+        "notificado_3",
+        "notificado_2",
+        "notificado_1",
+        "notificado_vencido"
+    ]
+
+    for columna in columnas_notificacion:
+
+        try:
+
+            if es_postgres():
+
+                cursor.execute(f"""
+                    ALTER TABLE ventas
+                    ADD COLUMN IF NOT EXISTS {columna} BOOLEAN DEFAULT FALSE
+                """)
+
+            else:
+
+                # SQLite no tiene IF NOT EXISTS en columnas
+                cursor.execute(adaptar_query(f"""
+                    ALTER TABLE ventas
+                    ADD COLUMN {columna} BOOLEAN DEFAULT FALSE
+                """))
+
+        except Exception:
+            # Si ya existe la columna simplemente continuamos
+            pass
+
+    conexion.commit()
+    conexion.close()
 
 
 # ======================================

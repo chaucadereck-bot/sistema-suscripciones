@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>{% block title %}Panel de Gestión{% endblock %}</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/saas.css') }}">
+
+</head>
+
+<body class="saas-body">
+
+{% if session.get('usuario') %}
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+
+<div class="sidebar-logo">
+Gestión de Licencias
+</div>
+
+<nav class="sidebar-menu">
+
+<a href="/" class="sidebar-link">Clientes</a>
+
+<a href="/ventas_contables" class="sidebar-link">Ventas Registradas</a>
+
+<a href="/pagos_terceros" class="sidebar-link">Pagos a Terceros</a>
+
+<a href="/contabilidad" class="sidebar-link">Registro Contable</a>
+
+<a href="/servicios" class="sidebar-link">Servicios Digitales</a>
+
+</nav>
+
+</aside>
+
+
+<!-- MAIN -->
+<div class="main">
+
+<header class="topbar">
+
+<div class="topbar-title">
+{% block header %}{% endblock %}
+</div>
+
+<div class="topbar-user">
+
+<span class="user-name">
+{{ session['usuario'] }}
+</span>
+
+<a href="{{ url_for('logout') }}" class="btn btn-danger btn-sm ms-3">
+Salir
+</a>
+
+</div>
+
+</header>
+
+
+<main class="content">
+
+<div class="container-fluid">
+
+{% block content %}{% endblock %}
+
+</div>
+
+</main>
+
+</div>
+
+</div>
+
+{% else %}
+
+<!-- LOGIN SIMPLE -->
+<div class="login-wrapper">
+
+{% block login_content %}{% endblock %}
+
+</div>
+
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

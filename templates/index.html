@@ -1,111 +1,74 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<title>Registro Clientes</title>
+{% extends "base.html" %}
 
-<style>
-body {
-    background-color: #f4f6f9;
-    font-size: 14px;
-}
+{% block title %}Clientes{% endblock %}
+{% block header %}Registro de Clientes{% endblock %}
 
-.card-resumen {
-    border-radius: 12px;
-    padding: 20px;
-    color: white;
-}
+{% block content %}
 
-.card-activos { background: linear-gradient(135deg, #198754, #146c43); }
-.card-vencidos { background: linear-gradient(135deg, #dc3545, #b02a37); }
-.card-alerta { background: linear-gradient(135deg, #ffc107, #d39e00); }
+<div class="container-fluid">
 
-.table thead {
-    background-color: #212529;
-    color: white;
-}
+<div class="row g-3 mb-4">
 
-.badge-codigo {
-    background-color: #e9ecef;
-    padding: 6px 10px;
-    border-radius: 6px;
-}
-</style>
-</head>
+<div class="col-md-3">
+<div class="card metric-card">
+<div class="card-body">
+<div class="metric-title">Clientes Activos</div>
+<div class="metric-value">{{ total_activos }}</div>
+</div>
+</div>
+</div>
 
-<body>
-<div class="container mt-4">
+<div class="col-md-3">
+<div class="card metric-card">
+<div class="card-body">
+<div class="metric-title">Por Vencer</div>
+<div class="metric-value">{{ total_por_vencer }}</div>
+</div>
+</div>
+</div>
 
-<!-- ===================== -->
-<!-- HEADER SUPERIOR -->
-<!-- ===================== -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="col-md-3">
+<div class="card metric-card">
+<div class="card-body">
+<div class="metric-title">Vencidos</div>
+<div class="metric-value">{{ total_vencidos }}</div>
+</div>
+</div>
+</div>
 
-    <h3 class="fw-bold mb-0">
-        REGISTRO CLIENTES
-    </h3>
-
-    <div>
-        <span class="me-3 text-muted">
-            {{ session['usuario'] }}
-        </span>
-
-        <a href="{{ url_for('logout') }}"
-           class="btn btn-danger btn-sm shadow-sm">
-            Salir
-        </a>
-    </div>
+<div class="col-md-3">
+<div class="card metric-card">
+<div class="card-body">
+<div class="metric-title">Storage Usado</div>
+<div class="metric-value">{{ usado_storage }} MB</div>
+<div class="metric-sub">Disponible {{ disponible_storage }} MB</div>
+</div>
+</div>
+</div>
 
 </div>
 
 <div class="mb-3">
-<a href="/agregar" class="btn btn-primary btn-sm shadow-sm me-2">+ Agregar Cliente</a>
-<a href="/contabilidad" class="btn btn-dark btn-sm shadow-sm me-2">📊 Contabilidad</a>
-<a href="/servicios" class="btn btn-success btn-sm shadow-sm">⚙ Servicios</a>
-</div>
 
-<!-- ===================== -->
-<!-- TARJETAS RESUMEN -->
-<!-- ===================== -->
-<div class="row mb-4">
+<a href="/agregar" class="btn btn-primary">
+Agregar Cliente
+</a>
 
-<div class="col-md-4">
-<div class="card-resumen card-activos shadow-sm">
-<h6>Clientes Activos</h6>
-<h3>{{ total_activos }}</h3>
-</div>
-</div>
+<a href="/contabilidad" class="btn btn-dark">
+Contabilidad
+</a>
 
-<div class="col-md-4">
-<div class="card-resumen card-alerta shadow-sm">
-<h6>Por Vencer</h6>
-<h3>{{ total_por_vencer }}</h3>
-</div>
-</div>
-
-<div class="col-md-4">
-<div class="card-resumen card-vencidos shadow-sm">
-<h6>Vencidos</h6>
-<h3>{{ total_vencidos }}</h3>
-</div>
-</div>
+<a href="/servicios" class="btn btn-success">
+Servicios
+</a>
 
 </div>
 
-<div style="margin-top:20px; padding:10px; background:#f0f0f0; border-radius:8px;">
-    <b>Storage Supabase</b><br>
-    Usado: {{ usado_storage }} MB / 50 MB<br>
-    Disponible: {{ disponible_storage }} MB
-</div>
+<div class="card table-card">
 
-<!-- ===================== -->
-<!-- TABLA CLIENTES -->
-<!-- ===================== -->
-<div class="card shadow-sm">
-<div class="card-body p-0">
+<div class="table-responsive">
 
-<table class="table table-hover text-center align-middle mb-0">
+<table class="table table-hover align-middle">
 
 <thead>
 <tr>
@@ -113,7 +76,7 @@ body {
 <th>Cliente</th>
 <th>Servicio</th>
 <th>Duración</th>
-<th>Vence</th>
+<th>Vencimiento</th>
 <th>Correo</th>
 <th>Estado</th>
 <th>Acciones</th>
@@ -123,32 +86,50 @@ body {
 <tbody>
 
 {% for registro in datos %}
+
 {% set d = registro[0] %}
 {% set alerta = registro[1] %}
 
-<tr class="
-{% if alerta == 'vencido' %}
-table-danger
-{% elif alerta == 'por_vencer' %}
-table-warning
-{% endif %}
-">
+<tr>
 
-<td><span class="badge-codigo">{{ d[0] }}</span></td>
+<td>{{ d[0] }}</td>
+
 <td>{{ d[4] }}</td>
+
 <td>{{ d[6] }}</td>
+
 <td>{{ d[2] }} meses</td>
+
 <td>{{ d[3] }}</td>
+
 <td>{{ d[8] }}</td>
-<td><strong>{{ d[9] }}</strong></td>
 
 <td>
-<a href="/renovar/{{ d[0] }}" class="btn btn-warning btn-sm me-1">Renovar</a>
-<a href="/editar/{{ d[0] }}" class="btn btn-info btn-sm me-1">Editar</a>
-<a href="/eliminar/{{ d[0] }}" class="btn btn-danger btn-sm"
-onclick="return confirm('¿Seguro que deseas eliminar este cliente?');">
-Eliminar
+
+{% if alerta == "vencido" %} <span class="badge bg-danger">Vencido</span>
+
+{% elif alerta == "por_vencer" %} <span class="badge bg-warning text-dark">Por vencer</span>
+
+{% else %} <span class="badge bg-success">Activo</span>
+
+{% endif %}
+
+</td>
+
+<td>
+
+<a href="/renovar/{{ d[0] }}" class="btn btn-sm btn-warning">
+Renovar
 </a>
+
+<a href="/editar/{{ d[0] }}" class="btn btn-sm btn-primary">
+Editar
+</a>
+
+<a href="/eliminar/{{ d[0] }}" class="btn btn-sm btn-danger"
+onclick="return confirm('¿Eliminar este cliente?')">
+Eliminar </a>
+
 </td>
 
 </tr>
@@ -160,8 +141,9 @@ Eliminar
 </table>
 
 </div>
+
 </div>
 
 </div>
-</body>
-</html>
+
+{% endblock %}

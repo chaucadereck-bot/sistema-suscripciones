@@ -1,219 +1,140 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<title>Ventas Contables</title>
+{% extends "base.html" %}
 
-<style>
-body {
-    background-color: #f4f6f9;
-    font-size: 14px;
-}
+{% block title %}Ventas Registradas{% endblock %}
+{% block header %}Ventas Contables{% endblock %}
 
-.table thead {
-    background-color: #212529;
-    color: white;
-}
+{% block content %}
 
-.badge-codigo {
-    background-color: #e9ecef;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-weight: 500;
-}
+<div class="container-fluid">
 
-.utilidad-positiva {
-    color: #198754;
-    font-weight: 600;
-}
+<div class="card table-card">
+<div class="table-responsive">
 
-.utilidad-negativa {
-    color: #dc3545;
-    font-weight: 600;
-}
-
-.btn-xs {
-    padding: 4px 8px;
-    font-size: 12px;
-}
-</style>
-</head>
-
-<body>
-<div class="container mt-4">
-
-<h4 class="fw-bold mb-4">Ventas Contables</h4>
-
-<div class="card shadow-sm">
-<div class="card-body p-0">
-
-<table class="table table-hover text-center align-middle mb-0">
+<table class="table table-hover align-middle">
 
 <thead>
 <tr>
-<th>#</th>
+<th>ID</th>
 <th>Código Venta</th>
 <th>Cliente</th>
 <th>Fecha</th>
 <th>Servicio</th>
-<th>Ingreso</th>
+<th>Precio</th>
 <th>Costo</th>
 <th>Utilidad</th>
 <th>Nota Venta</th>
-<th>Comprobante Banco</th>
+<th>Comprobante</th>
 </tr>
 </thead>
 
 <tbody>
 
 {% for d in datos %}
+
 <tr>
 
-<td>{{ loop.index }}</td>
-
-<td>
-<span class="badge-codigo">
-{{ d[1] }}
-</span>
-</td>
-
+<td>{{ d[0] }}</td>
+<td>{{ d[1] }}</td>
 <td>{{ d[2] }}</td>
 <td>{{ d[3] }}</td>
 <td>{{ d[4] }}</td>
+<td>{{ d[5] }}</td>
+<td>{{ d[6] }}</td>
+<td>{{ d[7] }}</td>
 
-<td>${{ d[5] }}</td>
-<td>${{ d[6] }}</td>
+<!-- NOTA DE VENTA -->
 
 <td>
-{% if d[7] >= 0 %}
-<span class="utilidad-positiva">${{ d[7] }}</span>
-{% else %}
-<span class="utilidad-negativa">${{ d[7] }}</span>
-{% endif %}
-</td>
 
-<!-- ================= NOTA ================= -->
-<td>
+<form action="/subir_archivo/venta_nota/{{ d[0] }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+
+<input
+type="file"
+name="archivo"
+id="nota_{{ d[0] }}"
+style="display:none"
+required
+onchange="this.form.submit()"
+>
 
 {% if d[8] %}
-    <a href="{{ d[8] }}" target="_blank"
-       class="btn btn-success btn-xs me-1">
-        Ver
-    </a>
 
-    <form action="{{ url_for('subir_archivo', tipo='venta_nota', identificador=d[0]) }}"
-          method="POST"
-          enctype="multipart/form-data"
-          style="display:inline;">
+<a href="{{ d[8] }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
 
-        <input type="file"
-               name="archivo"
-               id="nota_{{ d[0] }}"
-               style="display:none;"
-               onchange="this.form.submit()">
-
-        <button type="button"
-                class="btn btn-outline-primary btn-xs"
-                onclick="document.getElementById('nota_{{ d[0] }}').click();">
-            Reemplazar
-        </button>
-    </form>
+<button
+type="button"
+class="btn btn-sm btn-primary"
+onclick="document.getElementById('nota_{{ d[0] }}').click()">
+Reemplazar
+</button>
 
 {% else %}
 
-    <form action="{{ url_for('subir_archivo', tipo='venta_nota', identificador=d[0]) }}"
-          method="POST"
-          enctype="multipart/form-data"
-          style="display:inline;">
-
-        <input type="file"
-               name="archivo"
-               id="nota_{{ d[0] }}"
-               style="display:none;"
-               onchange="this.form.submit()">
-
-        <button type="button"
-                class="btn btn-outline-primary btn-xs"
-                onclick="document.getElementById('nota_{{ d[0] }}').click();">
-            Subir
-        </button>
-    </form>
+<button
+type="button"
+class="btn btn-sm btn-success"
+onclick="document.getElementById('nota_{{ d[0] }}').click()">
+Subir
+</button>
 
 {% endif %}
+
+</form>
 
 </td>
 
-<!-- ================= BANCO ================= -->
+<!-- COMPROBANTE -->
+
 <td>
 
+<form action="/subir_archivo/venta_banco/{{ d[0] }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+
+<input
+type="file"
+name="archivo"
+id="banco_{{ d[0] }}"
+style="display:none"
+required
+onchange="this.form.submit()"
+>
+
 {% if d[9] %}
-    <a href="{{ d[9] }}" target="_blank"
-       class="btn btn-success btn-xs me-1">
-        Ver
-    </a>
 
-    <form action="{{ url_for('subir_archivo', tipo='venta_banco', identificador=d[0]) }}"
-          method="POST"
-          enctype="multipart/form-data"
-          style="display:inline;">
+<a href="{{ d[9] }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
 
-        <input type="file"
-               name="archivo"
-               id="banco_{{ d[0] }}"
-               style="display:none;"
-               onchange="this.form.submit()">
-
-        <button type="button"
-                class="btn btn-outline-success btn-xs"
-                onclick="document.getElementById('banco_{{ d[0] }}').click();">
-            Reemplazar
-        </button>
-    </form>
+<button
+type="button"
+class="btn btn-sm btn-primary"
+onclick="document.getElementById('banco_{{ d[0] }}').click()">
+Reemplazar
+</button>
 
 {% else %}
 
-    <form action="{{ url_for('subir_archivo', tipo='venta_banco', identificador=d[0]) }}"
-          method="POST"
-          enctype="multipart/form-data"
-          style="display:inline;">
-
-        <input type="file"
-               name="archivo"
-               id="banco_{{ d[0] }}"
-               style="display:none;"
-               onchange="this.form.submit()">
-
-        <button type="button"
-                class="btn btn-outline-success btn-xs"
-                onclick="document.getElementById('banco_{{ d[0] }}').click();">
-            Subir
-        </button>
-    </form>
+<button
+type="button"
+class="btn btn-sm btn-success"
+onclick="document.getElementById('banco_{{ d[0] }}').click()">
+Subir
+</button>
 
 {% endif %}
+
+</form>
 
 </td>
 
 </tr>
+
 {% endfor %}
 
 </tbody>
+
 </table>
 
 </div>
 </div>
 
-<div class="mt-4">
-<a href="/contabilidad" class="btn btn-secondary btn-sm shadow-sm me-2">
-Volver a Contabilidad
-</a>
-
-<a href="/" class="btn btn-dark btn-sm shadow-sm">
-Ir al Panel
-</a>
 </div>
 
-</div>
-</body>
-</html>
+{% endblock %}
