@@ -59,8 +59,11 @@ app.config.update(
 )
 
 ALERTA_DIAS = 3
-USUARIO = "Dereck Chauca"
-PASSWORD = "1023"
+USUARIO = os.getenv("APP_USER")
+PASSWORD = os.getenv("APP_PASSWORD")
+
+if not USUARIO or not PASSWORD:
+    raise RuntimeError("APP_USER y APP_PASSWORD deben estar definidos como variables de entorno.")
 
 
 # ======================================
