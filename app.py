@@ -580,6 +580,12 @@ def debug_telegram():
 # ======================================
 @app.route("/cron")
 def cron():
+
+    CRON_KEY = os.getenv("CRON_KEY")
+
+    if not CRON_KEY or request.headers.get("X-CRON-KEY") != CRON_KEY:
+        return "Unauthorized", 403
+
     try:
         revisar_vencimientos()
         return "Cron ejecutado correctamente"
@@ -1275,6 +1281,13 @@ def contabilidad():
 # ======================================
 @app.route("/uploads/<path:archivo>")
 def ver_archivo_local(archivo):
+
+    if "usuario" not in session:
+        return redirect("/login")
+
+    # evitar path traversal
+    if ".." in archivo or archivo.startswith("/"):
+        return "Acceso inválido", 403
 
     ruta_base = os.path.abspath("uploads")
 
