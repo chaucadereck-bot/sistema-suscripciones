@@ -652,6 +652,9 @@ def index():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
+    # ================================
+    # CLIENTES
+    # ================================
     cursor.execute("""
         SELECT 
             codigo_venta,
@@ -706,9 +709,39 @@ def index():
 
         datos_con_alerta.append((d, alerta))
 
-    conexion.close()
-
+    # ================================
+    # STORAGE SUPABASE
+    # ================================
     usado_mb, disponible_mb = calcular_storage()
+
+    # ================================
+    # MÉTRICAS FINANCIERAS
+    # ================================
+    cursor.execute(adaptar_query("""
+        SELECT 
+            COALESCE(SUM(precio_venta),0),
+            COALESCE(SUM(costo_base),0),
+            COALESCE(SUM(utilidad),0)
+        FROM ventas_contables
+    """))
+
+    finanzas = cursor.fetchone()
+
+    total_ingresos = float(finanzas[0] or 0)
+    total_costos = float(finanzas[1] or 0)
+    total_utilidad = float(finanzas[2] or 0)
+
+    # ================================
+    # PAGOS A TERCEROS
+    # ================================
+    cursor.execute(adaptar_query("""
+        SELECT COALESCE(SUM(monto_usdt),0)
+        FROM pagos_terceros
+    """))
+
+    total_pagos = float(cursor.fetchone()[0] or 0)
+
+    conexion.close()
 
     return render_template(
         "dashboard/index.html",
@@ -717,7 +750,10 @@ def index():
         total_vencidos=vencidos,
         total_por_vencer=por_vencer,
         usado_storage=usado_mb,
-        disponible_storage=disponible_mb
+        disponible_storage=disponible_mb,
+        total_ingresos=round(total_ingresos,2),
+        total_pagos=round(total_pagos,2),
+        total_utilidad=round(total_utilidad,2)
     )
 
 

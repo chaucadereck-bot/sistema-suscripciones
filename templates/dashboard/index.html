@@ -5,6 +5,60 @@
 
 {% block content %}
 
+<!-- ================================
+BLOQUE ALERTAS DASHBOARD
+================================ -->
+
+{% if total_vencidos > 0 or total_por_vencer > 0 %}
+
+<div class="alert-panel">
+
+{% if total_vencidos > 0 %}
+<div class="alert-item alert-danger">
+
+<div class="alert-icon">
+⚠
+</div>
+
+<div class="alert-text">
+<strong>{{ total_vencidos }}</strong> cliente(s) vencido(s)
+</div>
+
+<a href="/" class="alert-action">
+Ver clientes
+</a>
+
+</div>
+{% endif %}
+
+{% if total_por_vencer > 0 %}
+<div class="alert-item alert-warning">
+
+<div class="alert-icon">
+⏳
+</div>
+
+<div class="alert-text">
+<strong>{{ total_por_vencer }}</strong> cliente(s) por vencer
+</div>
+
+<a href="/" class="alert-action">
+Revisar
+</a>
+
+</div>
+{% endif %}
+
+</div>
+
+{% endif %}
+
+
+
+<!-- ================================
+BLOQUE 1 — MÉTRICAS DASHBOARD
+================================ -->
+
 <div class="row g-4 mb-4">
 
 <div class="col-xl-3 col-md-6">
@@ -29,6 +83,7 @@ Clientes Activos
 </div>
 
 
+
 <div class="col-xl-3 col-md-6">
 <div class="card metric-card h-100">
 <div class="card-body">
@@ -49,6 +104,7 @@ Por Vencer
 </div>
 </div>
 </div>
+
 
 
 <div class="col-xl-3 col-md-6">
@@ -73,6 +129,11 @@ Vencidos
 </div>
 
 
+
+<!-- ================================
+BLOQUE STORAGE INTELIGENTE
+================================ -->
+
 <div class="col-xl-3 col-md-6">
 <div class="card metric-card h-100">
 <div class="card-body">
@@ -90,8 +151,28 @@ Storage Usado
 {{ usado_storage }} MB
 </div>
 
+{% set total_storage = usado_storage + disponible_storage %}
+
+{% if total_storage > 0 %}
+{% set porcentaje = (usado_storage / total_storage) * 100 %}
+{% else %}
+{% set porcentaje = 0 %}
+{% endif %}
+
+{% if porcentaje < 60 %}
+{% set color = "storage-ok" %}
+{% elif porcentaje < 85 %}
+{% set color = "storage-warning" %}
+{% else %}
+{% set color = "storage-danger" %}
+{% endif %}
+
+<div class="storage-bar">
+<div class="storage-progress {{ color }}" style="width: {{ porcentaje }}%"></div>
+</div>
+
 <div class="metric-sub">
-Disponible {{ disponible_storage }} MB
+{{ usado_storage }} MB / {{ total_storage }} MB
 </div>
 
 </div>
@@ -101,6 +182,10 @@ Disponible {{ disponible_storage }} MB
 </div>
 
 
+
+<!-- ================================
+BLOQUE 2 — TABLA DE CLIENTES
+================================ -->
 
 <div class="card table-card">
 
@@ -110,17 +195,17 @@ Disponible {{ disponible_storage }} MB
 Listado de Clientes
 </div>
 
-<div class="d-flex gap-2">
+<div class="action-group">
 
-<a href="/agregar" class="btn btn-primary btn-sm">
-Agregar Cliente
+<a href="/agregar" class="btn btn-primary btn-sm action-btn">
++ Cliente
 </a>
 
-<a href="/contabilidad" class="btn btn-dark btn-sm">
+<a href="/contabilidad" class="btn btn-dark btn-sm action-btn">
 Contabilidad
 </a>
 
-<a href="/servicios" class="btn btn-success btn-sm">
+<a href="/servicios" class="btn btn-success btn-sm action-btn">
 Servicios
 </a>
 
@@ -128,6 +213,11 @@ Servicios
 
 </div>
 
+
+
+<!-- ================================
+BLOQUE 3 — TABLA
+================================ -->
 
 <div class="table-responsive">
 
@@ -185,20 +275,23 @@ Servicios
 
 {% if alerta == "vencido" %}
 
-<span class="badge bg-danger">
-🔴 Vencido
+<span class="status-badge status-expired">
+<span class="status-dot"></span>
+Vencido
 </span>
 
 {% elif alerta == "por_vencer" %}
 
-<span class="badge bg-warning text-dark">
-🟡 Por vencer
+<span class="status-badge status-warning">
+<span class="status-dot"></span>
+Por vencer
 </span>
 
 {% else %}
 
-<span class="badge bg-success">
-🟢 Activo
+<span class="status-badge status-active">
+<span class="status-dot"></span>
+Activo
 </span>
 
 {% endif %}
