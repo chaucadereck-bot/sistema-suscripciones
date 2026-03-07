@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, send_from_directory
 import os
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import sqlite3
 import psycopg2
@@ -10,9 +11,14 @@ import time
 import traceback
 from PIL import Image
 import io
+from werkzeug.utils import secure_filename
 
+# sesión HTTP reutilizable
+http = requests.Session()
 
 app = Flask(__name__)
+
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
 # ==========================
 # CONFIGURACIÓN SUPABASE
@@ -38,7 +44,14 @@ except Exception as e:
     USANDO_SUPABASE = False
 
 
-app.secret_key = "clave_super_secreta_2026" 
+# ======================================
+# CONFIGURACIÓN DE SEGURIDAD
+# ======================================
+app.secret_key = os.getenv("SECRET_KEY")
+
+if not app.secret_key:
+    app.secret_key = secrets.token_hex(32)
+
 app.config.update(
     SESSION_COOKIE_SECURE=bool(os.getenv("DATABASE_URL")),
     SESSION_COOKIE_HTTPONLY=True,
@@ -51,14 +64,6 @@ PASSWORD = "1023"
 
 
 # ======================================
-# DETECTAR TIPO DE BASE DE DATOS
-# ======================================
-
-def es_postgres():
-    return os.getenv("DATABASE_URL") is not None
-
-
-# ======================================
 # CONEXIÓN AUTOMÁTICA (LOCAL / RAILWAY)
 # ======================================
 
@@ -66,17 +71,18 @@ def obtener_conexion():
     database_url = os.getenv("DATABASE_URL")
 
     if database_url:
-        return psycopg2.connect(
+        conn = psycopg2.connect(
             database_url,
             connect_timeout=10,
             sslmode="require"
         )
+        conn.autocommit = True
+        return conn
     else:
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
-    
 
 
 print("DATABASE_URL RAW:")
@@ -161,31 +167,6 @@ def crear_tabla():
     conexion.commit()
     conexion.close()
 
-
-# ======================================
-# CREAR TABLA
-# ======================================
-def crear_tabla():
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS ventas (
-            codigo_venta VARCHAR(50) PRIMARY KEY,
-            fecha DATE,
-            duracion_meses INTEGER,
-            fecha_vencimiento DATE,
-            cliente VARCHAR(100),
-            telefono VARCHAR(50),
-            servicio VARCHAR(100),
-            precio NUMERIC,
-            correo_cuenta VARCHAR(100),
-            estado VARCHAR(50)
-        );
-    """)
-
-    conexion.commit()
-    conexion.close()
 
 
 # ======================================
@@ -335,27 +316,45 @@ def enviar_telegram(mensaje):
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
     if not token or not chat_id:
-        return  # No configurado, no hacemos nada
+        return
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-    try:
-        requests.post(
-            url,
-            data={
-                "chat_id": chat_id,
-                "text": mensaje
-            },
-            timeout=10
-        )
-    except Exception:
-        pass
+    def _enviar():
+        try:
+            http.post(
+                url,
+                data={
+                    "chat_id": chat_id,
+                    "text": mensaje
+                },
+                timeout=10
+            )
+        except Exception:
+            pass
+
+    threading.Thread(target=_enviar, daemon=True).start()
    
+
+# ======================================
+# CACHE STORAGE
+# ======================================
+_storage_cache = {
+    "usado": 0,
+    "disponible": 50,
+    "timestamp": 0
+}
 
 # ======================================
 # CALCULAR STORAGE USADO
 # ======================================
 def calcular_storage():
+
+    global _storage_cache
+
+    # cache 5 minutos
+    if time.time() - _storage_cache["timestamp"] < 300:
+        return _storage_cache["usado"], _storage_cache["disponible"]
 
     total_bytes = 0
 
@@ -368,23 +367,30 @@ def calcular_storage():
 
         url = f"{SUPABASE_URL}/storage/v1/object/list/comprobantes"
 
-        response = requests.post(
+        response = http.post(
             url,
             headers=headers,
-            json={"prefix": ""}
+            json={"prefix": ""},
+            timeout=10
         )
 
         archivos = response.json()
 
-        for archivo in archivos:
-            if "metadata" in archivo and "size" in archivo["metadata"]:
-                total_bytes += int(archivo["metadata"]["size"])
+        if isinstance(archivos, list):
+
+            for archivo in archivos:
+                if "metadata" in archivo and "size" in archivo["metadata"]:
+                    total_bytes += int(archivo["metadata"]["size"])
 
     except Exception as e:
         print("Error calculando storage:", e)
 
     usado_mb = round(total_bytes / (1024 * 1024), 2)
     disponible_mb = round(50 - usado_mb, 2)
+
+    _storage_cache["usado"] = usado_mb
+    _storage_cache["disponible"] = disponible_mb
+    _storage_cache["timestamp"] = time.time()
 
     return usado_mb, disponible_mb
 
@@ -399,7 +405,7 @@ def revisar_vencimientos():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute("""
+    cursor.execute(adaptar_query("""
         SELECT codigo_venta, cliente, servicio,
                duracion_meses, telefono,
                fecha_vencimiento,
@@ -408,7 +414,7 @@ def revisar_vencimientos():
                COALESCE(notificado_1, FALSE),
                COALESCE(notificado_vencido, FALSE)
         FROM ventas
-    """)
+    """))
 
     registros = cursor.fetchall()
 
@@ -654,6 +660,15 @@ def agregar():
         try:
 
             codigo_venta = request.form["codigo_venta"].strip()
+            
+            cursor.execute(adaptar_query("""
+                SELECT 1 FROM ventas WHERE codigo_venta=?
+            """), (codigo_venta,))
+
+            if cursor.fetchone():
+                conexion.close()
+                return "El código de venta ya existe"
+            
             fecha_input = request.form["fecha"]
 
             # Normalizar fecha
@@ -675,7 +690,7 @@ def agregar():
             comprobante = request.files.get("comprobante_banco")
             nota = request.files.get("nota_venta")
 
-            if not comprobante or comprobante.filename == "":
+            if not comprobante or comprobante.filename.strip() == "":
                 conexion.close()
                 return "Debe subir comprobante bancario"
 
@@ -710,7 +725,9 @@ def agregar():
             # ================================
             # GUARDAR ARCHIVOS
             # ================================
-            nombre_banco = f"{codigo_venta}_banco_{comprobante.filename}"
+            filename = secure_filename(comprobante.filename)
+            nombre_banco = f"{codigo_venta}_banco_{filename}"
+
             url_banco = None
             url_nota = None
 
@@ -728,7 +745,7 @@ def agregar():
 
                     url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}?upsert=true"
 
-                    response = requests.put(
+                    response = http.put(
                         url_upload,
                         headers=headers,
                         data=contenido,
@@ -1056,7 +1073,7 @@ def renovar(codigo):
 
         comprobante = request.files.get("comprobante_banco")
 
-        if not comprobante or comprobante.filename == "":
+        if not comprobante or comprobante.filename.strip() == "":
             raise Exception("Debe subir comprobante.")
 
         if proveedor_nuevo and proveedor_nuevo.strip():
@@ -1074,7 +1091,8 @@ def renovar(codigo):
         # ================================
         # GUARDAR ARCHIVO (STORAGE)
         # ================================
-        nombre_archivo = f"{codigo}_{int(time.time())}_{comprobante.filename}"
+        filename = secure_filename(comprobante.filename)
+        nombre_archivo = f"{codigo}_{int(time.time())}_{filename}"
 
         if USANDO_SUPABASE:
 
@@ -1090,7 +1108,7 @@ def renovar(codigo):
 
                 url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}?upsert=true"
 
-                response = requests.put(
+                response = http.put(
                     url_upload,
                     headers=headers,
                     data=contenido,
@@ -1283,14 +1301,12 @@ def ventas_contables():
         vc.costo_base,
         vc.utilidad,
         vc.nota_venta,
-        pt.comprobante_binance
+        vc.comprobante_banco
     FROM ventas_contables vc
     JOIN ventas v
         ON vc.codigo_venta = v.codigo_venta
     JOIN servicios s
         ON vc.id_servicio = s.id_servicio
-    LEFT JOIN pagos_terceros pt
-        ON vc.id_contable = pt.id_contable
     ORDER BY vc.fecha DESC
     """))
 
@@ -1298,7 +1314,6 @@ def ventas_contables():
     conexion.close()
 
     return render_template("ventas_contables.html", datos=datos)
-
 
 
 # ======================================
@@ -1314,6 +1329,17 @@ def subir_archivo(tipo, identificador):
 
     if not archivo or archivo.filename.strip() == "":
         return "Archivo no enviado o vacío", 400
+
+    # ======================================
+    # EXTENSIONES PERMITIDAS
+    # ======================================
+    EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "pdf"}
+
+    filename = secure_filename(archivo.filename)
+    extension = filename.split(".")[-1].lower()
+
+    if extension not in EXTENSIONES_PERMITIDAS:
+        return "Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PDF.", 400
 
     # ======================================
     # CONFIGURACIÓN SEGURA DE TIPOS
@@ -1343,22 +1369,17 @@ def subir_archivo(tipo, identificador):
 
     try:
 
-        extension = archivo.filename.split(".")[-1].lower()
-
-        nombre_archivo = f"{identificador}.{extension}"
-
+        # NOMBRE ÚNICO PARA EVITAR COLISIONES
+        nombre_archivo = f"{tipo}_{identificador}_{int(time.time())}_{filename}"
         ruta_storage = f"{tipo}/{nombre_archivo}"
 
         # ======================================
         # OPTIMIZAR IMAGEN SI ES FOTO
         # ======================================
-        if extension in ["jpg", "jpeg", "png"]:
-
+        if extension in ["jpg", "jpeg"]:
             archivo_optimizado = optimizar_imagen(archivo)
             contenido = archivo_optimizado.read()
-
         else:
-
             contenido = archivo.read()
 
         # ======================================
@@ -1405,9 +1426,10 @@ def subir_archivo(tipo, identificador):
                         "Authorization": f"Bearer {SUPABASE_KEY}"
                     }
 
-                    requests.delete(
+                    http.delete(
                         f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_vieja}",
-                        headers=headers
+                        headers=headers,
+                        timeout=10
                     )
 
             except Exception as e:
@@ -1426,7 +1448,7 @@ def subir_archivo(tipo, identificador):
 
             url_upload = f"{SUPABASE_URL}/storage/v1/object/comprobantes/{ruta_storage}"
 
-            response = requests.put(
+            response = http.put(
                 url_upload,
                 headers=headers,
                 data=contenido,
@@ -1441,6 +1463,7 @@ def subir_archivo(tipo, identificador):
         else:
 
             os.makedirs(f"uploads/{tipo}", exist_ok=True)
+
             ruta_local = os.path.join("uploads", tipo, nombre_archivo)
 
             with open(ruta_local, "wb") as f:
