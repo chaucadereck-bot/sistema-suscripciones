@@ -711,7 +711,7 @@ def index():
     usado_mb, disponible_mb = calcular_storage()
 
     return render_template(
-        "index.html",
+        "dashboard/index.html",
         datos=datos_con_alerta,
         total_activos=activos,
         total_vencidos=vencidos,
@@ -912,7 +912,7 @@ def agregar():
     conexion.close()
 
     return render_template(
-        "agregar.html",
+        "ventas/agregar.html",
         servicios=servicios,
         proveedores=proveedores,
         codigo=generar_codigo()
@@ -1033,7 +1033,7 @@ def editar(codigo):
     registro = cursor.fetchone()
     conexion.close()
 
-    return render_template("editar.html", registro=registro, servicios=servicios)
+    return render_template("ventas/editar.html", registro=registro, servicios=servicios)
 
 
 # ======================================
@@ -1114,7 +1114,7 @@ def renovar(codigo):
         conexion.close()
 
         return render_template(
-            "renovar.html",
+            "ventas/renovar.html",
             codigo=codigo,
             cliente=cliente,
             proveedores=proveedores
@@ -1317,7 +1317,7 @@ def contabilidad():
         total_utilidad += utilidad
 
     return render_template(
-        "contabilidad.html",
+        "contabilidad/contabilidad.html",
         datos=datos,
         total_ingresos=round(total_ingresos, 2),
         total_pagos=round(total_pagos, 2),
@@ -1378,7 +1378,7 @@ def ventas_contables():
     datos = cursor.fetchall()
     conexion.close()
 
-    return render_template("ventas_contables.html", datos=datos)
+    return render_template("contabilidad/ventas_contables.html", datos=datos)
 
 
 # ======================================
@@ -1600,7 +1600,7 @@ def pagos_terceros():
     datos = cursor.fetchall()
     conexion.close()
 
-    return render_template("pagos_terceros.html", datos=datos)
+    return render_template("contabilidad/pagos_terceros.html", datos=datos)
 
 
 # ======================================
@@ -1628,7 +1628,7 @@ def listar_servicios():
     servicios = cursor.fetchall()
     conexion.close()
 
-    return render_template("servicios.html", servicios=servicios)
+    return render_template("servicios/servicios.html", servicios=servicios)
 
 
 # ======================================
@@ -1672,7 +1672,7 @@ def nuevo_servicio():
         except Exception as e:
             return f"Error creando servicio: {e}"
 
-    return render_template("servicio_form.html", modo="nuevo")
+    return render_template("servicios/servicio_form.html", modo="nuevo")
 
 
 # ======================================
@@ -1727,7 +1727,7 @@ def editar_servicio(id_servicio):
     servicio = cursor.fetchone()
     conexion.close()
 
-    return render_template("servicio_form.html", modo="editar", servicio=servicio)
+    return render_template("servicios/servicio_form.html", modo="editar", servicio=servicio)
 
 
 # ======================================
