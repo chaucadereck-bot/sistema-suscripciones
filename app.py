@@ -12,6 +12,16 @@ import traceback
 from PIL import Image
 import io
 from werkzeug.utils import secure_filename
+from functools import wraps
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "usuario" not in session:
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return decorated_function
 
 # sesión HTTP reutilizable
 http = requests.Session()
@@ -71,20 +81,32 @@ if not USUARIO or not PASSWORD:
 # ======================================
 
 def obtener_conexion():
+
     database_url = os.getenv("DATABASE_URL")
 
     if database_url:
+
         conn = psycopg2.connect(
             database_url,
             connect_timeout=10,
-            sslmode="require"
+            sslmode="require",
+            application_name="saas_sistema"
         )
+
         conn.autocommit = True
         return conn
+
     else:
-        conn = sqlite3.connect("database.db")
+
+        conn = sqlite3.connect(
+            "database.db",
+            timeout=10,
+            check_same_thread=False
+        )
+
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
+
         return conn
 
 
@@ -282,20 +304,33 @@ def insertar_servicios_base():
 # GENERAR CÓDIGO AUTOMÁTICO
 # ======================================
 def generar_codigo():
+
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
     año_actual = datetime.now().year
     patron = f"VEN-{año_actual}-%"
 
-    if os.getenv("DATABASE_URL"):
+    if es_postgres():
         cursor.execute(
-            "SELECT codigo_venta FROM ventas WHERE codigo_venta LIKE %s ORDER BY codigo_venta DESC LIMIT 1",
+            adaptar_query("""
+                SELECT codigo_venta
+                FROM ventas
+                WHERE codigo_venta LIKE ?
+                ORDER BY codigo_venta DESC
+                LIMIT 1
+            """),
             (patron,)
         )
     else:
         cursor.execute(
-            "SELECT codigo_venta FROM ventas WHERE codigo_venta LIKE ? ORDER BY codigo_venta DESC LIMIT 1",
+            adaptar_query("""
+                SELECT codigo_venta
+                FROM ventas
+                WHERE codigo_venta LIKE ?
+                ORDER BY codigo_venta DESC
+                LIMIT 1
+            """),
             (patron,)
         )
 
@@ -307,7 +342,9 @@ def generar_codigo():
     else:
         numero = 1
 
-    return f"VEN-{año_actual}-{numero:03d}"
+    random_hex = secrets.token_hex(2)
+
+    return f"VEN-{año_actual}-{numero:03d}-{random_hex}"
 
 
 # ======================================
@@ -323,20 +360,22 @@ def enviar_telegram(mensaje):
 
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
+    payload = {
+        "chat_id": chat_id,
+        "text": mensaje
+    }
+
     def _enviar():
         try:
-            http.post(
-                url,
-                data={
-                    "chat_id": chat_id,
-                    "text": mensaje
-                },
-                timeout=10
-            )
+            http.post(url, data=payload, timeout=10)
         except Exception:
             pass
 
-    threading.Thread(target=_enviar, daemon=True).start()
+    threading.Thread(
+        target=_enviar,
+        daemon=True,
+        name="telegram_sender"
+    ).start()
    
 
 # ======================================
@@ -355,7 +394,6 @@ def calcular_storage():
 
     global _storage_cache
 
-    # cache 5 minutos
     if time.time() - _storage_cache["timestamp"] < 300:
         return _storage_cache["usado"], _storage_cache["disponible"]
 
@@ -377,7 +415,13 @@ def calcular_storage():
             timeout=10
         )
 
-        archivos = response.json()
+        if response.status_code != 200:
+            return _storage_cache["usado"], _storage_cache["disponible"]
+
+        try:
+            archivos = response.json()
+        except Exception:
+            return _storage_cache["usado"], _storage_cache["disponible"]
 
         if isinstance(archivos, list):
 
@@ -385,8 +429,8 @@ def calcular_storage():
                 if "metadata" in archivo and "size" in archivo["metadata"]:
                     total_bytes += int(archivo["metadata"]["size"])
 
-    except Exception as e:
-        print("Error calculando storage:", e)
+    except Exception:
+        return _storage_cache["usado"], _storage_cache["disponible"]
 
     usado_mb = round(total_bytes / (1024 * 1024), 2)
     disponible_mb = round(50 - usado_mb, 2)
@@ -408,6 +452,9 @@ def revisar_vencimientos():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
+    hoy = (datetime.utcnow() - timedelta(hours=5)).date()
+    limite = hoy + timedelta(days=ALERTA_DIAS)
+
     cursor.execute(adaptar_query("""
         SELECT codigo_venta, cliente, servicio,
                duracion_meses, telefono,
@@ -417,12 +464,10 @@ def revisar_vencimientos():
                COALESCE(notificado_1, FALSE),
                COALESCE(notificado_vencido, FALSE)
         FROM ventas
-    """))
+        WHERE fecha_vencimiento <= ?
+    """), (limite,))
 
     registros = cursor.fetchall()
-
-    # Ecuador GMT-5
-    hoy = (datetime.utcnow() - timedelta(hours=5)).date()
 
     for r in registros:
 
@@ -562,7 +607,7 @@ def debug_telegram():
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
     try:
-        response = requests.post(
+        response = http.post(
             url,
             data={
                 "chat_id": chat_id,
@@ -607,7 +652,22 @@ def index():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute("SELECT * FROM ventas ORDER BY fecha_vencimiento ASC")
+    cursor.execute("""
+        SELECT 
+            codigo_venta,
+            fecha,
+            duracion_meses,
+            fecha_vencimiento,
+            cliente,
+            telefono,
+            servicio,
+            precio,
+            correo_cuenta,
+            estado
+        FROM ventas
+        ORDER BY fecha_vencimiento ASC
+    """)
+
     datos = cursor.fetchall()
 
     hoy = datetime.today().date()
@@ -620,7 +680,16 @@ def index():
 
     for d in datos:
 
-        fecha_v = datetime.strptime(str(d[3]), "%Y-%m-%d").date()
+        fecha_v_raw = d[3]
+
+        if not fecha_v_raw:
+            continue
+
+        if isinstance(fecha_v_raw, str):
+            fecha_v = datetime.strptime(fecha_v_raw[:10], "%Y-%m-%d").date()
+        else:
+            fecha_v = fecha_v_raw
+
         dias_restantes = (fecha_v - hoy).days
 
         if d[9] == "vencido":
@@ -649,7 +718,7 @@ def index():
         total_por_vencer=por_vencer,
         usado_storage=usado_mb,
         disponible_storage=disponible_mb
-    ) 
+    )
 
 
 
@@ -657,10 +726,8 @@ def index():
 # AGREGAR CLIENTE
 # ======================================
 @app.route("/agregar", methods=["GET", "POST"])
+@login_required
 def agregar():
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -669,7 +736,7 @@ def agregar():
         try:
 
             codigo_venta = request.form["codigo_venta"].strip()
-            
+
             cursor.execute(adaptar_query("""
                 SELECT 1 FROM ventas WHERE codigo_venta=?
             """), (codigo_venta,))
@@ -677,10 +744,9 @@ def agregar():
             if cursor.fetchone():
                 conexion.close()
                 return "El código de venta ya existe"
-            
+
             fecha_input = request.form["fecha"]
 
-            # Normalizar fecha
             if "/" in fecha_input:
                 fecha_obj = datetime.strptime(fecha_input, "%d/%m/%Y")
             else:
@@ -703,7 +769,6 @@ def agregar():
                 conexion.close()
                 return "Debe subir comprobante bancario"
 
-            # Determinar proveedor
             if proveedor_nuevo and proveedor_nuevo.strip():
                 proveedor_final = proveedor_nuevo.strip()
             elif proveedor_select:
@@ -711,7 +776,6 @@ def agregar():
             else:
                 proveedor_final = "Proveedor Automático"
 
-            # Obtener datos del servicio
             cursor.execute(adaptar_query("""
                 SELECT precio_base, costo_base, duracion_meses
                 FROM servicios
@@ -731,9 +795,6 @@ def agregar():
             fecha_vencimiento = fecha_obj + relativedelta(months=duracion)
             utilidad = precio_base - costo_base
 
-            # ================================
-            # GUARDAR ARCHIVOS
-            # ================================
             filename = secure_filename(comprobante.filename)
             nombre_banco = f"{codigo_venta}_banco_{filename}"
 
@@ -776,9 +837,6 @@ def agregar():
                 comprobante.save(ruta_local)
                 url_banco = "/" + ruta_local
 
-            # ================================
-            # INSERTAR EN VENTAS
-            # ================================
             cursor.execute(adaptar_query("""
                 INSERT INTO ventas
                 (codigo_venta, fecha, duracion_meses, fecha_vencimiento,
@@ -797,10 +855,7 @@ def agregar():
                 "activo"
             ))
 
-            # ================================
-            # INSERTAR EN VENTAS_CONTABLES
-            # ================================
-            id_contable = f"{codigo_venta}-{int(time.time())}"
+            id_contable = f"{codigo_venta}-{secrets.token_hex(4)}"
 
             cursor.execute(adaptar_query("""
                 INSERT INTO ventas_contables
@@ -817,10 +872,7 @@ def agregar():
                 utilidad
             ))
 
-            # ================================
-            # INSERTAR EN PAGOS_TERCEROS
-            # ================================
-            id_pago = f"PAG-{id_contable}"
+            id_pago = f"PAG-{secrets.token_hex(6)}"
 
             cursor.execute(adaptar_query("""
                 INSERT INTO pagos_terceros
@@ -846,9 +898,6 @@ def agregar():
             conexion.close()
             return f"Error al agregar cliente: {e}"
 
-    # ================================
-    # GET → Cargar formulario
-    # ================================
     cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
     servicios = cursor.fetchall()
 
@@ -1346,9 +1395,6 @@ def subir_archivo(tipo, identificador):
     if not archivo or archivo.filename.strip() == "":
         return "Archivo no enviado o vacío", 400
 
-    # ======================================
-    # EXTENSIONES PERMITIDAS
-    # ======================================
     EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "pdf"}
 
     filename = secure_filename(archivo.filename)
@@ -1357,9 +1403,6 @@ def subir_archivo(tipo, identificador):
     if extension not in EXTENSIONES_PERMITIDAS:
         return "Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PDF.", 400
 
-    # ======================================
-    # CONFIGURACIÓN SEGURA DE TIPOS
-    # ======================================
     TIPOS_VALIDOS = {
         "venta_banco": {
             "tabla": "ventas_contables",
@@ -1385,30 +1428,20 @@ def subir_archivo(tipo, identificador):
 
     try:
 
-        # NOMBRE ÚNICO PARA EVITAR COLISIONES
-        nombre_archivo = f"{tipo}_{identificador}_{int(time.time())}_{filename}"
+        nombre_archivo = f"{tipo}_{identificador}_{secrets.token_hex(6)}_{filename}"
         ruta_storage = f"{tipo}/{nombre_archivo}"
 
-        # ======================================
-        # OPTIMIZAR IMAGEN SI ES FOTO
-        # ======================================
         if extension in ["jpg", "jpeg"]:
             archivo_optimizado = optimizar_imagen(archivo)
             contenido = archivo_optimizado.read()
         else:
             contenido = archivo.read()
 
-        # ======================================
-        # LIMITE DE TAMAÑO 150KB
-        # ======================================
         MAX_FILE_SIZE = 150 * 1024
 
         if len(contenido) > MAX_FILE_SIZE:
             return "El comprobante supera el límite de 150KB", 400
 
-        # ======================================
-        # BUSCAR ARCHIVO ANTERIOR
-        # ======================================
         conexion = obtener_conexion()
         cursor = conexion.cursor()
 
@@ -1426,9 +1459,6 @@ def subir_archivo(tipo, identificador):
 
         archivo_anterior = registro[0]
 
-        # ======================================
-        # ELIMINAR ARCHIVO ANTERIOR (SEGURO)
-        # ======================================
         if archivo_anterior and USANDO_SUPABASE:
 
             try:
@@ -1448,12 +1478,9 @@ def subir_archivo(tipo, identificador):
                         timeout=10
                     )
 
-            except Exception as e:
-                print("Error eliminando archivo anterior:", e)
+            except Exception:
+                pass
 
-        # ======================================
-        # SUBIR ARCHIVO NUEVO
-        # ======================================
         if USANDO_SUPABASE:
 
             headers = {
@@ -1487,9 +1514,6 @@ def subir_archivo(tipo, identificador):
 
             url_archivo = "/" + ruta_local
 
-        # ======================================
-        # ACTUALIZAR BASE DE DATOS
-        # ======================================
         cursor.execute(adaptar_query(f"""
             UPDATE {config['tabla']}
             SET {config['campo']}=?
@@ -1512,36 +1536,35 @@ def subir_archivo(tipo, identificador):
 def optimizar_imagen(archivo):
 
     try:
+
         archivo.seek(0)
-        imagen = Image.open(archivo)
 
-        # convertir PNG o formatos especiales
-        if imagen.mode in ("RGBA", "P"):
-            imagen = imagen.convert("RGB")
+        with Image.open(archivo) as imagen:
 
-        # ancho ideal para comprobantes
-        max_ancho = 1000
+            if imagen.mode in ("RGBA", "P"):
+                imagen = imagen.convert("RGB")
 
-        if imagen.width > max_ancho:
-            proporcion = max_ancho / float(imagen.width)
-            nuevo_alto = int(imagen.height * proporcion)
+            max_ancho = 1000
 
-            imagen = imagen.resize((max_ancho, nuevo_alto), Image.LANCZOS)
+            if imagen.width > max_ancho:
+                proporcion = max_ancho / float(imagen.width)
+                nuevo_alto = int(imagen.height * proporcion)
 
-        buffer = io.BytesIO()
+                imagen = imagen.resize((max_ancho, nuevo_alto), Image.LANCZOS)
 
-        # compresión optimizada
-        imagen.save(
-            buffer,
-            format="JPEG",
-            quality=60,
-            optimize=True,
-            progressive=True
-        )
+            buffer = io.BytesIO()
 
-        buffer.seek(0)
+            imagen.save(
+                buffer,
+                format="JPEG",
+                quality=60,
+                optimize=True,
+                progressive=True
+            )
 
-        return buffer
+            buffer.seek(0)
+
+            return buffer
 
     except Exception:
         archivo.seek(0)
