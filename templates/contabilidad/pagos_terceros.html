@@ -5,22 +5,35 @@
 
 {% block content %}
 
-<div class="container-fluid">
-
 <div class="card table-card">
+
+<div class="card-header d-flex justify-content-between align-items-center">
+
+<div class="table-title">
+Pagos a Proveedores
+</div>
+
+<div class="table-sub">
+Registro de pagos realizados a terceros
+</div>
+
+</div>
+
 <div class="table-responsive">
 
-<table class="table table-hover align-middle">
+<table class="table table-hover table-sm align-middle mb-0">
 
-<thead>
+<thead class="table-light">
+
 <tr>
 <th>ID Pago</th>
 <th>Código Venta</th>
 <th>Fecha Pago</th>
-<th>Monto (USDT)</th>
+<th class="text-end">Monto (USDT)</th>
 <th>Proveedor</th>
 <th>Comprobante</th>
 </tr>
+
 </thead>
 
 <tbody>
@@ -29,15 +42,24 @@
 
 <tr>
 
-<td>{{ d[0] }}</td>
+<td class="fw-semibold">{{ d[0] }}</td>
+
 <td>{{ d[1] }}</td>
+
 <td>{{ d[2] }}</td>
-<td>{{ d[3] }}</td>
+
+<td class="text-end text-primary fw-semibold">
+{{ d[3] }} USDT
+</td>
+
 <td>{{ d[4] }}</td>
 
 <td>
 
-<form action="/subir_archivo/pago_binance/{{ d[0] }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+<form action="/subir_archivo/pago_binance/{{ d[0] }}"
+method="POST"
+enctype="multipart/form-data"
+class="d-flex align-items-center gap-2">
 
 <input
 type="file"
@@ -50,11 +72,15 @@ onchange="this.form.submit()"
 
 {% if d[5] %}
 
-<a href="{{ d[5] }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
+<a href="{{ d[5] }}"
+target="_blank"
+class="btn btn-outline-secondary btn-sm">
+Ver
+</a>
 
 <button
 type="button"
-class="btn btn-sm btn-primary"
+class="btn btn-outline-primary btn-sm"
 onclick="document.getElementById('pago_{{ d[0] }}').click()">
 Reemplazar
 </button>
@@ -63,7 +89,7 @@ Reemplazar
 
 <button
 type="button"
-class="btn btn-sm btn-success"
+class="btn btn-success btn-sm"
 onclick="document.getElementById('pago_{{ d[0] }}').click()">
 Subir
 </button>
@@ -82,7 +108,6 @@ Subir
 
 </table>
 
-</div>
 </div>
 
 </div>

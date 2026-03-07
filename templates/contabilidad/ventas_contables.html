@@ -5,26 +5,39 @@
 
 {% block content %}
 
-<div class="container-fluid">
-
 <div class="card table-card">
+
+<div class="card-header d-flex justify-content-between align-items-center">
+
+<div class="table-title">
+Registro de Ventas
+</div>
+
+<div class="table-sub">
+Historial contable de ventas registradas
+</div>
+
+</div>
+
 <div class="table-responsive">
 
-<table class="table table-hover align-middle">
+<table class="table table-hover table-sm align-middle mb-0">
 
-<thead>
+<thead class="table-light">
+
 <tr>
 <th>ID</th>
 <th>Código Venta</th>
 <th>Cliente</th>
 <th>Fecha</th>
 <th>Servicio</th>
-<th>Precio</th>
-<th>Costo</th>
-<th>Utilidad</th>
+<th class="text-end">Precio</th>
+<th class="text-end">Costo</th>
+<th class="text-end">Utilidad</th>
 <th>Nota Venta</th>
 <th>Comprobante</th>
 </tr>
+
 </thead>
 
 <tbody>
@@ -33,20 +46,37 @@
 
 <tr>
 
-<td>{{ d[0] }}</td>
+<td class="fw-semibold">{{ d[0] }}</td>
+
 <td>{{ d[1] }}</td>
+
 <td>{{ d[2] }}</td>
+
 <td>{{ d[3] }}</td>
+
 <td>{{ d[4] }}</td>
-<td>{{ d[5] }}</td>
-<td>{{ d[6] }}</td>
-<td>{{ d[7] }}</td>
+
+<td class="text-end text-success fw-semibold">
+$ {{ d[5] }}
+</td>
+
+<td class="text-end text-muted">
+$ {{ d[6] }}
+</td>
+
+<td class="text-end text-primary fw-semibold">
+$ {{ d[7] }}
+</td>
+
 
 <!-- NOTA DE VENTA -->
 
 <td>
 
-<form action="/subir_archivo/venta_nota/{{ d[0] }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+<form action="/subir_archivo/venta_nota/{{ d[0] }}"
+method="POST"
+enctype="multipart/form-data"
+class="d-flex align-items-center gap-2">
 
 <input
 type="file"
@@ -59,11 +89,15 @@ onchange="this.form.submit()"
 
 {% if d[8] %}
 
-<a href="{{ d[8] }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
+<a href="{{ d[8] }}"
+target="_blank"
+class="btn btn-outline-secondary btn-sm">
+Ver
+</a>
 
 <button
 type="button"
-class="btn btn-sm btn-primary"
+class="btn btn-outline-primary btn-sm"
 onclick="document.getElementById('nota_{{ d[0] }}').click()">
 Reemplazar
 </button>
@@ -72,7 +106,7 @@ Reemplazar
 
 <button
 type="button"
-class="btn btn-sm btn-success"
+class="btn btn-success btn-sm"
 onclick="document.getElementById('nota_{{ d[0] }}').click()">
 Subir
 </button>
@@ -83,11 +117,15 @@ Subir
 
 </td>
 
-<!-- COMPROBANTE -->
+
+<!-- COMPROBANTE BANCARIO -->
 
 <td>
 
-<form action="/subir_archivo/venta_banco/{{ d[0] }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+<form action="/subir_archivo/venta_banco/{{ d[0] }}"
+method="POST"
+enctype="multipart/form-data"
+class="d-flex align-items-center gap-2">
 
 <input
 type="file"
@@ -100,11 +138,15 @@ onchange="this.form.submit()"
 
 {% if d[9] %}
 
-<a href="{{ d[9] }}" target="_blank" class="btn btn-sm btn-secondary">Ver</a>
+<a href="{{ d[9] }}"
+target="_blank"
+class="btn btn-outline-secondary btn-sm">
+Ver
+</a>
 
 <button
 type="button"
-class="btn btn-sm btn-primary"
+class="btn btn-outline-primary btn-sm"
 onclick="document.getElementById('banco_{{ d[0] }}').click()">
 Reemplazar
 </button>
@@ -113,7 +155,7 @@ Reemplazar
 
 <button
 type="button"
-class="btn btn-sm btn-success"
+class="btn btn-success btn-sm"
 onclick="document.getElementById('banco_{{ d[0] }}').click()">
 Subir
 </button>
@@ -132,7 +174,6 @@ Subir
 
 </table>
 
-</div>
 </div>
 
 </div>

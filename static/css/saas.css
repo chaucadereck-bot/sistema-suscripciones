@@ -1,38 +1,89 @@
 /* =================================
-BLOQUE 1 — DESIGN TOKENS + BASE
+BLOQUE 1 — DESIGN TOKENS + BASE SYSTEM
+Sistema visual central del SaaS
 ================================= */
 
 :root{
 
-/* ========= COLORS ========= */
+/* =================================
+COLOR SYSTEM
+Paleta SaaS moderna (no bootstrap)
+================================= */
 
 --saas-bg:#f6f8fb;
---saas-bg-soft:#f8fafc;
+--saas-bg-soft:#f9fafb;
+--saas-bg-elevated:#ffffff;
 
---saas-card:#ffffff;
+/* Sidebar */
 
---saas-border:#e5e7eb;
+--saas-sidebar-bg:#0f172a;
+--saas-sidebar-hover:rgba(255,255,255,0.06);
+--saas-sidebar-active:rgba(99,102,241,0.18);
+
+/* Texto */
+
+--saas-text:#0f172a;
+--saas-text-muted:#64748b;
+--saas-text-soft:#94a3b8;
+
+/* Bordes */
+
+--saas-border:#e2e8f0;
 --saas-border-soft:#f1f5f9;
 
---saas-text:#111827;
---saas-text-muted:#6b7280;
+/* Colores principales */
 
---saas-primary:#2563eb;
---saas-primary-hover:#1d4ed8;
+--saas-primary:#6366f1;
+--saas-primary-hover:#4f46e5;
+
+--saas-accent:#06b6d4;
+--saas-accent-soft:#ecfeff;
+
+/* Estados */
 
 --saas-success:#10b981;
+--saas-success-soft:#ecfdf5;
+
 --saas-warning:#f59e0b;
+--saas-warning-soft:#fffbeb;
+
 --saas-danger:#ef4444;
+--saas-danger-soft:#fef2f2;
 
 
-/* ========= SHADOWS ========= */
+/* =================================
+RADIUS SYSTEM
+Consistencia visual
+================================= */
 
---shadow-xs:0 1px 2px rgba(16,24,40,0.04);
---shadow-sm:0 4px 12px rgba(16,24,40,0.06);
---shadow-md:0 10px 28px rgba(16,24,40,0.08);
+--radius-xs:4px;
+--radius-sm:6px;
+--radius-md:8px;
+--radius-lg:12px;
+--radius-xl:16px;
 
 
-/* ========= SPACING ========= */
+/* =================================
+SHADOW SYSTEM
+Profundidad SaaS moderna
+================================= */
+
+--shadow-xs:0 1px 2px rgba(0,0,0,0.03);
+
+--shadow-sm:
+0 4px 12px rgba(15,23,42,0.06);
+
+--shadow-md:
+0 10px 28px rgba(15,23,42,0.08);
+
+--shadow-lg:
+0 18px 40px rgba(15,23,42,0.12);
+
+
+/* =================================
+SPACING SYSTEM
+Escala consistente
+================================= */
 
 --space-1:4px;
 --space-2:8px;
@@ -42,11 +93,14 @@ BLOQUE 1 — DESIGN TOKENS + BASE
 --space-6:24px;
 --space-7:32px;
 --space-8:40px;
+--space-9:48px;
 
 
-/* ========= LAYOUT ========= */
+/* =================================
+LAYOUT SYSTEM
+================================= */
 
---sidebar-width:252px;
+--sidebar-width:260px;
 --content-max:1380px;
 
 }
@@ -68,7 +122,7 @@ padding:0;
 
 color:var(--saas-text);
 
-line-height:1.5;
+line-height:1.55;
 
 -webkit-font-smoothing:antialiased;
 -moz-osx-font-smoothing:grayscale;
@@ -79,7 +133,7 @@ animation:saasFadeIn .25s ease;
 
 
 /* =================================
-TYPOGRAPHY
+TYPOGRAPHY SYSTEM
 ================================= */
 
 h1,h2,h3,h4,h5{
@@ -90,7 +144,7 @@ letter-spacing:-0.02em;
 
 color:var(--saas-text);
 
-margin-bottom:6px;
+margin:0 0 6px 0;
 
 }
 
@@ -101,6 +155,8 @@ color:var(--saas-text-muted);
 font-size:13.5px;
 
 line-height:1.6;
+
+margin:0;
 
 }
 
@@ -117,7 +173,7 @@ font-weight:500;
 
 text-decoration:none;
 
-transition:color .14s ease;
+transition:color .15s ease;
 
 }
 
@@ -129,7 +185,39 @@ color:var(--saas-primary-hover);
 
 
 /* =================================
-SCROLLBAR
+GLOBAL TRANSITIONS
+================================= */
+
+*{
+
+transition:
+
+background-color .15s ease,
+border-color .15s ease,
+color .15s ease,
+box-shadow .15s ease,
+transform .15s ease;
+
+}
+
+
+/* =================================
+FOCUS ACCESSIBILITY
+================================= */
+
+:focus-visible{
+
+outline:2px solid rgba(99,102,241,0.45);
+
+outline-offset:2px;
+
+border-radius:var(--radius-sm);
+
+}
+
+
+/* =================================
+SCROLLBAR (SaaS style)
 ================================= */
 
 ::-webkit-scrollbar{
@@ -161,37 +249,7 @@ background:#94a3b8;
 
 
 /* =================================
-GLOBAL TRANSITIONS
-================================= */
-
-*{
-
-transition:
-background-color .14s ease,
-border-color .14s ease,
-color .14s ease,
-box-shadow .14s ease;
-
-}
-
-
-/* =================================
-FOCUS ACCESSIBILITY
-================================= */
-
-:focus-visible{
-
-outline:2px solid rgba(37,99,235,0.45);
-
-outline-offset:2px;
-
-border-radius:6px;
-
-}
-
-
-/* =================================
-PAGE ANIMATION
+PAGE FADE ANIMATION
 ================================= */
 
 @keyframes saasFadeIn{
@@ -222,6 +280,8 @@ svg{
 
 vertical-align:middle;
 
+max-width:100%;
+
 }
 
 
@@ -235,11 +295,16 @@ scroll-behavior:smooth;
 
 }
 
+
 /* =================================
 BLOQUE 2 — LAYOUT SYSTEM
+Sistema de estructura del panel SaaS
 ================================= */
 
-/* APP LAYOUT */
+
+/* =================================
+APP LAYOUT
+================================= */
 
 .layout{
 
@@ -252,7 +317,9 @@ background:var(--saas-bg);
 }
 
 
-/* MAIN AREA */
+/* =================================
+MAIN AREA
+================================= */
 
 .main{
 
@@ -264,16 +331,18 @@ flex-direction:column;
 
 min-width:0;
 
+background:var(--saas-bg);
+
 }
 
 
-/* CONTENT AREA */
+/* =================================
+TOP LEVEL CONTENT
+================================= */
 
 .content{
 
 flex:1;
-
-padding:var(--space-7) var(--space-8);
 
 display:flex;
 
@@ -281,10 +350,19 @@ flex-direction:column;
 
 gap:var(--space-7);
 
+padding:var(--space-8);
+
+width:100%;
+
+box-sizing:border-box;
+
 }
 
 
-/* CONTAINER SYSTEM */
+/* =================================
+CONTAINER SYSTEM
+Centro del contenido
+================================= */
 
 .container-fluid{
 
@@ -299,7 +377,27 @@ padding:0;
 }
 
 
-/* SECTION SPACING */
+/* =================================
+PAGE WRAPPER
+Separación visual entre secciones
+================================= */
+
+.page-wrapper{
+
+display:flex;
+
+flex-direction:column;
+
+gap:var(--space-7);
+
+width:100%;
+
+}
+
+
+/* =================================
+SECTION SPACING
+================================= */
 
 .section-spacing{
 
@@ -308,20 +406,27 @@ margin-bottom:var(--space-7);
 }
 
 
-/* DASHBOARD GRID */
+/* =================================
+DASHBOARD GRID
+Tarjetas métricas
+================================= */
 
 .dashboard-grid{
 
 display:grid;
 
-grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
 
 gap:24px;
+
+align-items:stretch;
 
 }
 
 
-/* DASHBOARD SECTION */
+/* =================================
+DASHBOARD SECTION
+================================= */
 
 .dashboard-section{
 
@@ -334,7 +439,9 @@ gap:18px;
 }
 
 
-/* PAGE HEADER */
+/* =================================
+PAGE HEADER
+================================= */
 
 .page-header{
 
@@ -344,11 +451,11 @@ align-items:flex-start;
 
 justify-content:space-between;
 
-gap:16px;
-
-margin-bottom:20px;
+gap:var(--space-4);
 
 flex-wrap:wrap;
+
+margin-bottom:var(--space-4);
 
 }
 
@@ -366,7 +473,7 @@ gap:4px;
 }
 
 
-/* PAGE TITLE */
+/* TITLE */
 
 .page-title{
 
@@ -383,7 +490,7 @@ line-height:1.2;
 }
 
 
-/* PAGE SUBTITLE */
+/* SUBTITLE */
 
 .page-subtitle{
 
@@ -404,7 +511,7 @@ display:flex;
 
 align-items:center;
 
-gap:8px;
+gap:var(--space-2);
 
 flex-wrap:wrap;
 
@@ -426,7 +533,9 @@ margin-top:12px;
 }
 
 
-/* SECTION HEADER */
+/* =================================
+SECTION HEADER
+================================= */
 
 .section-header{
 
@@ -469,40 +578,56 @@ gap:6px;
 }
 
 
-/* CONTENT CARD WRAPPER */
+/* =================================
+CONTENT CARD WRAPPER
+================================= */
 
 .content-card{
 
-background:var(--saas-card);
+background:var(--saas-bg-elevated);
 
 border:1px solid var(--saas-border);
 
-border-radius:12px;
+border-radius:var(--radius-lg);
 
-padding:24px;
+padding:var(--space-6);
 
 box-shadow:var(--shadow-xs);
 
 }
 
 
-/* RESPONSIVE */
+/* =================================
+RESPONSIVE
+================================= */
 
 @media (max-width:1200px){
 
 .content{
 
-padding:28px;
+padding:var(--space-7);
 
 }
 
 }
+
+
+@media (max-width:900px){
+
+.content{
+
+padding:var(--space-6);
+
+}
+
+}
+
 
 @media (max-width:768px){
 
 .content{
 
-padding:22px;
+padding:var(--space-5);
 
 }
 
@@ -528,23 +653,24 @@ width:100%;
 
 }
 
+
 /* =================================
 BLOQUE 3 — SIDEBAR
+Sidebar profesional estilo SaaS
 ================================= */
 
 .sidebar{
 
 width:var(--sidebar-width);
 
-background:#0f172a;
+background:var(--saas-sidebar-bg);
 
 color:#e5e7eb;
 
 display:flex;
-
 flex-direction:column;
 
-padding:16px 0;
+padding:18px 0;
 
 border-right:1px solid rgba(255,255,255,0.04);
 
@@ -553,37 +679,49 @@ position:relative;
 }
 
 
-/* SIDEBAR LOGO */
+/* =================================
+SIDEBAR HEADER
+================================= */
+
+.sidebar-header{
+
+display:flex;
+align-items:center;
+
+padding:0 22px 18px 22px;
+
+border-bottom:1px solid rgba(255,255,255,0.06);
+
+margin-bottom:12px;
+
+}
+
+
+/* LOGO */
 
 .sidebar-logo{
 
-padding:0 24px 18px 24px;
-
 font-size:17px;
-
 font-weight:600;
 
 letter-spacing:-0.02em;
 
 color:#ffffff;
 
-border-bottom:1px solid rgba(255,255,255,0.06);
-
-margin-bottom:10px;
-
 display:flex;
-
 align-items:center;
+gap:8px;
 
 }
 
 
-/* MENU CONTAINER */
+/* =================================
+MENU CONTAINER
+================================= */
 
 .sidebar-menu{
 
 display:flex;
-
 flex-direction:column;
 
 gap:4px;
@@ -597,24 +735,23 @@ scrollbar-width:none;
 }
 
 .sidebar-menu::-webkit-scrollbar{
-
 display:none;
-
 }
 
 
-/* SIDEBAR LINKS */
+/* =================================
+SIDEBAR LINKS
+================================= */
 
 .sidebar-link{
 
 display:flex;
-
 align-items:center;
+gap:10px;
 
-padding:8px 20px;
+padding:9px 18px;
 
 font-size:13px;
-
 font-weight:500;
 
 color:#9ca3af;
@@ -623,15 +760,15 @@ text-decoration:none;
 
 border-left:2px solid transparent;
 
-border-radius:6px;
+border-radius:var(--radius-sm);
 
 margin:0 10px;
 
 transition:
 
-background .14s ease,
-color .14s ease,
-border-color .14s ease,
+background .15s ease,
+color .15s ease,
+border-color .15s ease,
 transform .12s ease;
 
 }
@@ -641,7 +778,7 @@ transform .12s ease;
 
 .sidebar-link:hover{
 
-background:rgba(255,255,255,0.06);
+background:var(--saas-sidebar-hover);
 
 color:#ffffff;
 
@@ -650,11 +787,11 @@ transform:translateX(2px);
 }
 
 
-/* ACTIVE */
+/* ACTIVE STATE */
 
 .sidebar-link.active{
 
-background:rgba(37,99,235,0.18);
+background:var(--saas-sidebar-active);
 
 color:#ffffff;
 
@@ -680,7 +817,28 @@ color:#ffffff;
 }
 
 
-/* DIVIDER */
+/* =================================
+MENU ICON
+================================= */
+
+.menu-icon{
+
+font-size:14px;
+
+opacity:.85;
+
+width:16px;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+}
+
+
+/* =================================
+DIVIDER
+================================= */
 
 .sidebar-divider{
 
@@ -693,7 +851,9 @@ margin:16px 18px;
 }
 
 
-/* FOOTER */
+/* =================================
+SIDEBAR FOOTER
+================================= */
 
 .sidebar-footer{
 
@@ -703,27 +863,51 @@ padding:16px 22px;
 
 border-top:1px solid rgba(255,255,255,0.06);
 
+display:flex;
+flex-direction:column;
+
+gap:8px;
+
+}
+
+
+/* LOGOUT */
+
+.sidebar-logout{
+
 font-size:12.5px;
 
 color:#9ca3af;
 
+text-decoration:none;
+
+transition:color .14s ease;
+
+}
+
+.sidebar-logout:hover{
+
+color:#ffffff;
+
 }
 
 
-/* RESPONSIVE */
+/* =================================
+RESPONSIVE
+================================= */
 
 @media (max-width:900px){
 
 .sidebar{
-
 width:220px;
-
 }
 
 }
+
 
 /* =================================
 BLOQUE 4 — TOPBAR
+Barra superior del panel SaaS
 ================================= */
 
 .topbar{
@@ -733,12 +917,10 @@ height:56px;
 background:#ffffff;
 
 display:flex;
-
 align-items:center;
-
 justify-content:space-between;
 
-padding:0 32px;
+padding:0 var(--space-8);
 
 border-bottom:1px solid var(--saas-border);
 
@@ -748,10 +930,27 @@ top:0;
 
 z-index:20;
 
+box-shadow:var(--shadow-xs);
+
 }
 
 
-/* TITLE */
+/* =================================
+TOPBAR LEFT
+================================= */
+
+.topbar-left{
+
+display:flex;
+align-items:center;
+gap:var(--space-4);
+
+}
+
+
+/* =================================
+TITLE
+================================= */
 
 .topbar-title{
 
@@ -764,31 +963,32 @@ letter-spacing:-0.02em;
 color:var(--saas-text);
 
 display:flex;
-
 align-items:center;
 
 }
 
 
-/* ACTION AREA */
+/* =================================
+TOPBAR RIGHT
+================================= */
 
-.topbar-actions{
+.topbar-right{
 
 display:flex;
-
 align-items:center;
 
-gap:10px;
+gap:var(--space-3);
 
 }
 
 
-/* USER AREA */
+/* =================================
+USER BOX
+================================= */
 
-.topbar-user{
+.user-box{
 
 display:flex;
-
 align-items:center;
 
 gap:10px;
@@ -798,6 +998,20 @@ padding-left:14px;
 border-left:1px solid var(--saas-border);
 
 margin-left:6px;
+
+}
+
+
+/* =================================
+USER INFO
+================================= */
+
+.user-info{
+
+display:flex;
+flex-direction:column;
+
+line-height:1.2;
 
 }
 
@@ -815,12 +1029,24 @@ color:#374151;
 }
 
 
-/* USER AVATAR */
+/* USER ROLE */
+
+.user-role{
+
+font-size:11px;
+
+color:var(--saas-text-muted);
+
+}
+
+
+/* =================================
+USER AVATAR
+================================= */
 
 .user-avatar{
 
 width:30px;
-
 height:30px;
 
 border-radius:50%;
@@ -830,7 +1056,6 @@ background:#e5e7eb;
 display:flex;
 
 align-items:center;
-
 justify-content:center;
 
 font-size:12px;
@@ -842,7 +1067,9 @@ color:#374151;
 }
 
 
-/* BUTTON STYLE INSIDE TOPBAR */
+/* =================================
+TOPBAR BUTTONS
+================================= */
 
 .topbar .btn{
 
@@ -850,12 +1077,12 @@ font-size:12.5px;
 
 padding:6px 12px;
 
-border-radius:7px;
+border-radius:var(--radius-sm);
 
 }
 
 
-/* BUTTON HOVER */
+/* BUTTON HOVER EFFECT */
 
 .topbar .btn:hover{
 
@@ -866,13 +1093,15 @@ box-shadow:0 3px 8px rgba(0,0,0,0.08);
 }
 
 
-/* RESPONSIVE */
+/* =================================
+RESPONSIVE
+================================= */
 
 @media (max-width:900px){
 
 .topbar{
 
-padding:0 20px;
+padding:0 var(--space-6);
 
 }
 
@@ -884,9 +1113,14 @@ font-size:16px;
 
 }
 
+
 /* =================================
 BLOQUE 5 — DASHBOARD METRICS
+Tarjetas de métricas estilo SaaS PRO
 ================================= */
+
+
+/* GRID DE MÉTRICAS */
 
 .metrics-row{
 
@@ -894,7 +1128,7 @@ display:grid;
 
 grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
 
-gap:20px;
+gap:22px;
 
 align-items:stretch;
 
@@ -905,31 +1139,55 @@ align-items:stretch;
 
 .metric-card{
 
-background:var(--saas-card);
+background:var(--saas-bg-elevated);
 
 border:1px solid var(--saas-border);
 
-border-radius:14px;
+border-radius:var(--radius-lg);
 
-padding:18px;
+padding:20px;
 
 display:flex;
-
 flex-direction:column;
 
 justify-content:center;
 
 gap:6px;
 
-min-height:92px;
+min-height:96px;
 
 box-shadow:var(--shadow-xs);
 
+position:relative;
+
+overflow:hidden;
+
 transition:
 
-transform .16s ease,
-box-shadow .16s ease,
-border-color .16s ease;
+transform .18s ease,
+box-shadow .18s ease,
+border-color .18s ease;
+
+}
+
+
+/* ACCENT LINE */
+
+.metric-card::before{
+
+content:"";
+
+position:absolute;
+
+left:0;
+top:0;
+
+width:4px;
+height:100%;
+
+background:var(--saas-primary);
+
+opacity:.85;
 
 }
 
@@ -938,9 +1196,9 @@ border-color .16s ease;
 
 .metric-card:hover{
 
-transform:translateY(-3px);
+transform:translateY(-4px);
 
-box-shadow:var(--shadow-md);
+box-shadow:var(--shadow-lg);
 
 border-color:#e2e8f0;
 
@@ -970,7 +1228,7 @@ font-size:11px;
 
 font-weight:600;
 
-letter-spacing:.05em;
+letter-spacing:.06em;
 
 text-transform:uppercase;
 
@@ -983,9 +1241,9 @@ color:var(--saas-text-muted);
 
 .metric-value{
 
-font-size:28px;
+font-size:30px;
 
-font-weight:650;
+font-weight:700;
 
 letter-spacing:-0.02em;
 
@@ -1002,14 +1260,14 @@ line-height:1.2;
 
 font-size:12px;
 
-color:#9ca3af;
+color:var(--saas-text-soft);
 
 margin-top:4px;
 
 }
 
 
-/* TREND */
+/* TREND INDICATOR */
 
 .metric-trend{
 
@@ -1017,11 +1275,11 @@ display:flex;
 
 align-items:center;
 
-gap:6px;
+gap:4px;
 
-font-size:12px;
+font-size:11px;
 
-font-weight:500;
+font-weight:600;
 
 margin-top:6px;
 
@@ -1044,25 +1302,50 @@ color:var(--saas-danger);
 
 .metric-footer{
 
-margin-top:4px;
+margin-top:6px;
 
 font-size:12px;
 
-color:#9ca3af;
+color:var(--saas-text-soft);
 
 }
 
+
+/* ICON */
+
+.metric-icon{
+
+width:34px;
+height:34px;
+
+border-radius:var(--radius-md);
+
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+font-size:16px;
+
+background:var(--saas-accent-soft);
+
+color:var(--saas-accent);
+
+}
+
+
 /* =================================
 BLOQUE 6 — CARDS
+Sistema de tarjetas del panel SaaS
 ================================= */
 
 .card{
 
-background:var(--saas-card);
+background:var(--saas-bg-elevated);
 
 border:1px solid var(--saas-border);
 
-border-radius:14px;
+border-radius:var(--radius-lg);
 
 box-shadow:var(--shadow-xs);
 
@@ -1087,7 +1370,9 @@ border-color:#e2e8f0;
 }
 
 
-/* CARD HEADER */
+/* =================================
+CARD HEADER
+================================= */
 
 .card-header{
 
@@ -1106,24 +1391,56 @@ letter-spacing:.01em;
 color:var(--saas-text);
 
 display:flex;
-
 align-items:center;
-
 justify-content:space-between;
 
 }
 
 
-/* CARD BODY */
+/* HEADER TITLE */
+
+.card-header-title{
+
+font-size:14px;
+
+font-weight:600;
+
+color:var(--saas-text);
+
+}
+
+
+/* HEADER ACTIONS */
+
+.card-header-actions{
+
+display:flex;
+align-items:center;
+
+gap:8px;
+
+}
+
+
+/* =================================
+CARD BODY
+================================= */
 
 .card-body{
 
 padding:20px;
 
+display:flex;
+flex-direction:column;
+
+gap:14px;
+
 }
 
 
-/* CARD FOOTER */
+/* =================================
+CARD FOOTER
+================================= */
 
 .card-footer{
 
@@ -1133,10 +1450,16 @@ border-top:1px solid var(--saas-border-soft);
 
 padding:12px 20px;
 
+display:flex;
+align-items:center;
+justify-content:space-between;
+
 }
 
 
-/* CARD TITLE */
+/* =================================
+CARD TITLE
+================================= */
 
 .card-title{
 
@@ -1166,7 +1489,9 @@ margin-bottom:14px;
 }
 
 
-/* CARD ACTIONS */
+/* =================================
+CARD ACTIONS
+================================= */
 
 .card-actions{
 
@@ -1176,19 +1501,41 @@ align-items:center;
 
 gap:8px;
 
+flex-wrap:wrap;
+
 }
 
+
 /* =================================
-BLOQUE 7 — TABLES
+FORM CARD
+Tarjetas usadas en formularios
+================================= */
+
+.form-card{
+
+background:var(--saas-bg-elevated);
+
+border:1px solid var(--saas-border);
+
+border-radius:var(--radius-lg);
+
+box-shadow:var(--shadow-xs);
+
+}
+
+
+/* =================================
+TABLE CARD
+Tarjetas usadas en tablas
 ================================= */
 
 .table-card{
 
-background:var(--saas-card);
+background:var(--saas-bg-elevated);
 
 border:1px solid var(--saas-border);
 
-border-radius:14px;
+border-radius:var(--radius-lg);
 
 overflow:hidden;
 
@@ -1197,224 +1544,81 @@ box-shadow:var(--shadow-xs);
 }
 
 
-/* TABLE BASE */
+/* =================================
+CONTENT CARD
+Contenedor general
+================================= */
 
-.table{
+.content-card{
 
-width:100%;
-
-margin:0;
-
-font-size:13px;
-
-border-collapse:separate;
-
-border-spacing:0;
-
-background:#ffffff;
-
-}
-
-
-/* TABLE HEADER */
-
-.table thead{
-
-background:var(--saas-bg-soft);
-
-}
-
-.table thead th{
-
-font-size:11px;
-
-font-weight:600;
-
-letter-spacing:.05em;
-
-text-transform:uppercase;
-
-color:var(--saas-text-muted);
-
-padding:11px 14px;
-
-border-bottom:1px solid var(--saas-border);
-
-vertical-align:middle;
-
-white-space:nowrap;
-
-position:sticky;
-
-top:0;
-
-z-index:1;
-
-}
-
-
-/* TABLE BODY ROWS */
-
-.table tbody tr{
-
-border-bottom:1px solid var(--saas-border-soft);
-
-transition:background .14s ease;
-
-}
-
-
-/* ROW HOVER */
-
-.table tbody tr:hover{
-
-background:#f1f5f9;
-
-}
-
-
-/* TABLE CELLS */
-
-.table td{
-
-padding:10px 14px;
-
-vertical-align:middle;
-
-color:var(--saas-text);
-
-white-space:nowrap;
-
-font-size:13px;
-
-}
-
-
-/* FIRST COLUMN */
-
-.table td:first-child,
-.table thead th:first-child{
-
-padding-left:20px;
-
-}
-
-
-/* LAST COLUMN */
-
-.table td:last-child,
-.table thead th:last-child{
-
-padding-right:20px;
-
-}
-
-
-/* ACTIONS */
-
-.table-actions{
-
-display:flex;
-
-align-items:center;
-
-gap:6px;
-
-}
-
-
-/* BADGES */
-
-.badge{
-
-font-size:11px;
-
-font-weight:500;
-
-padding:4px 8px;
-
-border-radius:6px;
-
-}
-
-
-/* STATUS BADGES */
-
-.status-badge{
-
-display:inline-flex;
-
-align-items:center;
-
-gap:4px;
-
-padding:3px 8px;
-
-border-radius:6px;
-
-font-size:11px;
-
-font-weight:500;
-
-}
-
-.status-success{
-
-background:#ecfdf5;
-
-color:#065f46;
-
-border:1px solid #d1fae5;
-
-}
-
-.status-warning{
-
-background:#fffbeb;
-
-color:#92400e;
-
-border:1px solid #fde68a;
-
-}
-
-.status-error{
-
-background:#fef2f2;
-
-color:#991b1b;
-
-border:1px solid #fecaca;
-
-}
-
-.status-neutral{
-
-background:#f1f5f9;
-
-color:#475569;
-
-border:1px solid #e2e8f0;
-
-}
-
-
-/* TABLE RESPONSIVE */
-
-.table-responsive{
-
-overflow-x:auto;
-
-border-radius:14px;
+background:var(--saas-bg-elevated);
 
 border:1px solid var(--saas-border);
 
-background:#ffffff;
+border-radius:var(--radius-lg);
+
+padding:var(--space-6);
+
+box-shadow:var(--shadow-xs);
 
 }
 
 
-/* TABLE HEADER AREA */
+/* =================================
+RESPONSIVE
+================================= */
+
+@media (max-width:768px){
+
+.card-body{
+
+padding:18px;
+
+}
+
+.card-header{
+
+padding:12px 16px;
+
+}
+
+.card-footer{
+
+padding:12px 16px;
+
+}
+
+}
+
+
+/* =================================
+BLOQUE 7 — TABLES
+Tablas profesionales estilo SaaS
+================================= */
+
+
+/* =================================
+TABLE CARD WRAPPER
+================================= */
+
+.table-card{
+
+background:var(--saas-bg-elevated);
+
+border:1px solid var(--saas-border);
+
+border-radius:var(--radius-lg);
+
+overflow:hidden;
+
+box-shadow:var(--shadow-xs);
+
+}
+
+
+/* =================================
+TABLE HEADER AREA
+================================= */
 
 .table-header{
 
@@ -1456,27 +1660,269 @@ color:var(--saas-text-muted);
 
 }
 
+
 /* =================================
-BLOQUE 8 — BUTTONS
+TABLE BASE
 ================================= */
 
-.btn{
+.table{
+
+width:100%;
+
+margin:0;
+
+font-size:13px;
+
+border-collapse:separate;
+
+border-spacing:0;
+
+background:#ffffff;
+
+}
+
+
+/* =================================
+TABLE HEADER
+================================= */
+
+.table thead{
+
+background:var(--saas-bg-soft);
+
+}
+
+.table thead th{
+
+font-size:11px;
+
+font-weight:600;
+
+letter-spacing:.05em;
+
+text-transform:uppercase;
+
+color:var(--saas-text-muted);
+
+padding:11px 14px;
+
+border-bottom:1px solid var(--saas-border);
+
+vertical-align:middle;
+
+white-space:nowrap;
+
+position:sticky;
+
+top:0;
+
+z-index:1;
+
+}
+
+
+/* =================================
+TABLE BODY
+================================= */
+
+.table tbody tr{
+
+border-bottom:1px solid var(--saas-border-soft);
+
+transition:background .14s ease;
+
+}
+
+
+/* ROW HOVER */
+
+.table tbody tr:hover{
+
+background:#f1f5f9;
+
+}
+
+
+/* =================================
+TABLE CELLS
+================================= */
+
+.table td{
+
+padding:10px 14px;
+
+vertical-align:middle;
+
+color:var(--saas-text);
+
+white-space:nowrap;
+
+font-size:13px;
+
+}
+
+
+/* FIRST COLUMN */
+
+.table td:first-child,
+.table thead th:first-child{
+
+padding-left:20px;
+
+}
+
+
+/* LAST COLUMN */
+
+.table td:last-child,
+.table thead th:last-child{
+
+padding-right:20px;
+
+}
+
+
+/* =================================
+TABLE ACTIONS
+================================= */
+
+.table-actions{
+
+display:flex;
+
+align-items:center;
+
+gap:6px;
+
+}
+
+
+/* =================================
+BADGES
+================================= */
+
+.badge{
+
+font-size:11px;
+
+font-weight:500;
+
+padding:4px 8px;
+
+border-radius:var(--radius-sm);
+
+}
+
+
+/* STATUS BADGES */
+
+.status-badge{
 
 display:inline-flex;
 
 align-items:center;
 
+gap:4px;
+
+padding:3px 8px;
+
+border-radius:var(--radius-sm);
+
+font-size:11px;
+
+font-weight:500;
+
+}
+
+
+/* SUCCESS */
+
+.status-success{
+
+background:var(--saas-success-soft);
+
+color:#065f46;
+
+border:1px solid #d1fae5;
+
+}
+
+
+/* WARNING */
+
+.status-warning{
+
+background:var(--saas-warning-soft);
+
+color:#92400e;
+
+border:1px solid #fde68a;
+
+}
+
+
+/* ERROR */
+
+.status-error{
+
+background:var(--saas-danger-soft);
+
+color:#991b1b;
+
+border:1px solid #fecaca;
+
+}
+
+
+/* NEUTRAL */
+
+.status-neutral{
+
+background:#f1f5f9;
+
+color:#475569;
+
+border:1px solid #e2e8f0;
+
+}
+
+
+/* =================================
+TABLE RESPONSIVE
+================================= */
+
+.table-responsive{
+
+overflow-x:auto;
+
+border-radius:var(--radius-lg);
+
+border:1px solid var(--saas-border);
+
+background:#ffffff;
+
+}
+
+
+/* =================================
+BLOQUE 8 — BUTTONS
+Sistema de botones SaaS profesional
+================================= */
+
+.btn{
+
+display:inline-flex;
+align-items:center;
 justify-content:center;
 
 gap:6px;
 
 font-size:12.5px;
-
 font-weight:500;
 
-padding:5px 12px;
+padding:6px 12px;
 
-border-radius:7px;
+border-radius:var(--radius-sm);
 
 border:1px solid transparent;
 
@@ -1484,8 +1930,9 @@ cursor:pointer;
 
 min-height:32px;
 
-transition:
+background:#ffffff;
 
+transition:
 background .14s ease,
 border-color .14s ease,
 box-shadow .14s ease,
@@ -1494,7 +1941,9 @@ transform .08s ease;
 }
 
 
-/* PRIMARY */
+/* =================================
+PRIMARY BUTTON
+================================= */
 
 .btn-primary{
 
@@ -1512,7 +1961,7 @@ background:var(--saas-primary-hover);
 
 border-color:var(--saas-primary-hover);
 
-box-shadow:0 4px 10px rgba(37,99,235,0.25);
+box-shadow:0 4px 10px rgba(99,102,241,0.25);
 
 transform:translateY(-1px);
 
@@ -1522,12 +1971,14 @@ transform:translateY(-1px);
 
 transform:translateY(0);
 
-box-shadow:0 2px 6px rgba(37,99,235,0.25);
+box-shadow:0 2px 6px rgba(99,102,241,0.25);
 
 }
 
 
-/* SECONDARY */
+/* =================================
+SECONDARY BUTTON
+================================= */
 
 .btn-secondary{
 
@@ -1550,7 +2001,9 @@ transform:translateY(-1px);
 }
 
 
-/* SUCCESS */
+/* =================================
+SUCCESS BUTTON
+================================= */
 
 .btn-success{
 
@@ -1573,7 +2026,9 @@ transform:translateY(-1px);
 }
 
 
-/* WARNING */
+/* =================================
+WARNING BUTTON
+================================= */
 
 .btn-warning{
 
@@ -1596,7 +2051,9 @@ transform:translateY(-1px);
 }
 
 
-/* DANGER */
+/* =================================
+DANGER BUTTON
+================================= */
 
 .btn-danger{
 
@@ -1619,7 +2076,9 @@ transform:translateY(-1px);
 }
 
 
-/* OUTLINE */
+/* =================================
+OUTLINE PRIMARY
+================================= */
 
 .btn-outline-primary{
 
@@ -1640,20 +2099,24 @@ color:#ffffff;
 }
 
 
-/* SMALL BUTTONS */
+/* =================================
+SMALL BUTTONS
+================================= */
 
 .btn-sm{
 
 min-height:26px;
 
-padding:3px 8px;
+padding:4px 9px;
 
 font-size:11.5px;
 
 }
 
 
-/* TABLE BUTTONS */
+/* =================================
+TABLE BUTTONS
+================================= */
 
 .table .btn{
 
@@ -1663,12 +2126,14 @@ font-size:11.5px;
 
 min-height:24px;
 
-border-radius:6px;
+border-radius:var(--radius-xs);
 
 }
 
 
-/* EXTRA SMALL */
+/* =================================
+EXTRA SMALL BUTTON
+================================= */
 
 .btn-xs{
 
@@ -1676,21 +2141,79 @@ font-size:11px;
 
 padding:3px 6px;
 
-border-radius:5px;
+border-radius:var(--radius-xs);
 
 }
 
+
+/* =================================
+BUTTON GROUP
+================================= */
+
+.btn-group{
+
+display:inline-flex;
+
+gap:4px;
+
+}
+
+
+/* =================================
+ICON BUTTON
+================================= */
+
+.btn-icon{
+
+display:inline-flex;
+
+align-items:center;
+justify-content:center;
+
+width:32px;
+height:32px;
+
+padding:0;
+
+border-radius:var(--radius-sm);
+
+}
+
+
+/* =================================
+BUTTON DISABLED
+================================= */
+
+.btn:disabled{
+
+opacity:.6;
+
+cursor:not-allowed;
+
+transform:none;
+
+box-shadow:none;
+
+}
+
+
 /* =================================
 BLOQUE 9 — FORMS
+Sistema de formularios SaaS profesional
+================================= */
+
+
+/* =================================
+FORM CARD
 ================================= */
 
 .form-card{
 
-background:var(--saas-card);
+background:var(--saas-bg-elevated);
 
 border:1px solid var(--saas-border);
 
-border-radius:14px;
+border-radius:var(--radius-lg);
 
 box-shadow:var(--shadow-xs);
 
@@ -1704,7 +2227,6 @@ box-shadow:var(--shadow-xs);
 padding:24px;
 
 display:flex;
-
 flex-direction:column;
 
 gap:16px;
@@ -1712,7 +2234,9 @@ gap:16px;
 }
 
 
-/* LABEL */
+/* =================================
+LABEL
+================================= */
 
 .form-label{
 
@@ -1729,7 +2253,9 @@ letter-spacing:.02em;
 }
 
 
-/* INPUT BASE */
+/* =================================
+INPUT BASE
+================================= */
 
 .form-control,
 .form-select{
@@ -1740,7 +2266,7 @@ background:#ffffff;
 
 border:1px solid #d1d5db;
 
-border-radius:8px;
+border-radius:var(--radius-md);
 
 font-size:13px;
 
@@ -1770,7 +2296,9 @@ font-weight:400;
 }
 
 
-/* HOVER */
+/* =================================
+HOVER
+================================= */
 
 .form-control:hover,
 .form-select:hover{
@@ -1780,14 +2308,16 @@ border-color:#cbd5e1;
 }
 
 
-/* FOCUS */
+/* =================================
+FOCUS
+================================= */
 
 .form-control:focus,
 .form-select:focus{
 
 border-color:var(--saas-primary);
 
-box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+box-shadow:0 0 0 3px rgba(99,102,241,0.12);
 
 background:#ffffff;
 
@@ -1796,7 +2326,9 @@ outline:none;
 }
 
 
-/* TEXTAREA */
+/* =================================
+TEXTAREA
+================================= */
 
 textarea.form-control{
 
@@ -1807,7 +2339,9 @@ resize:vertical;
 }
 
 
-/* FORM GROUP */
+/* =================================
+FORM GROUP
+================================= */
 
 .form-card .mb-3{
 
@@ -1816,7 +2350,9 @@ margin-bottom:14px;
 }
 
 
-/* FOOTER */
+/* =================================
+FORM FOOTER
+================================= */
 
 .form-card .mt-4{
 
@@ -1835,7 +2371,9 @@ gap:10px;
 }
 
 
-/* SELECT CURSOR */
+/* =================================
+SELECT CURSOR
+================================= */
 
 .form-select{
 
@@ -1844,7 +2382,9 @@ cursor:pointer;
 }
 
 
-/* DISABLED */
+/* =================================
+DISABLED
+================================= */
 
 .form-control:disabled,
 .form-select:disabled{
@@ -1858,7 +2398,9 @@ cursor:not-allowed;
 }
 
 
-/* VALIDATION */
+/* =================================
+VALIDATION STATES
+================================= */
 
 .form-control.is-invalid{
 
@@ -1876,60 +2418,197 @@ box-shadow:0 0 0 3px rgba(16,185,129,0.12);
 
 }
 
+
 /* =================================
-BLOQUE 10 — FILE UPLOAD
+FORM GRID HELPERS
 ================================= */
 
-input[type="file"]{
+.form-row{
 
-width:100%;
+display:grid;
 
-font-size:12px;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
 
-color:transparent;
-
-cursor:pointer;
-
-background:#ffffff;
+gap:16px;
 
 }
 
 
-/* FILE BUTTON */
+/* =================================
+FORM ACTIONS
+================================= */
+
+.form-actions{
+
+display:flex;
+
+align-items:center;
+
+gap:10px;
+
+flex-wrap:wrap;
+
+}
+
+
+/* =================================
+INPUT ICON
+================================= */
+
+.input-with-icon{
+
+position:relative;
+
+display:flex;
+
+align-items:center;
+
+}
+
+.input-with-icon input{
+
+padding-left:32px;
+
+}
+
+.input-icon{
+
+position:absolute;
+
+left:10px;
+
+font-size:13px;
+
+color:var(--saas-text-muted);
+
+pointer-events:none;
+
+}
+
+
+/* =================================
+BLOQUE 10 — FILE UPLOAD
+Subida de archivos estilo SaaS
+================================= */
+
+
+/* FILE INPUT BASE */
+
+input[type="file"].form-control{
+
+padding:6px 8px;
+
+font-size:12.5px;
+
+cursor:pointer;
+
+}
+
+
+/* FILE SELECT BUTTON */
 
 input[type="file"]::file-selector-button{
 
-background:#f1f5f9;
+border:1px solid var(--saas-border);
 
-border:1px solid #e2e8f0;
+background:#f8fafc;
 
-border-radius:7px;
+color:var(--saas-text);
 
-padding:6px 12px;
+padding:5px 10px;
+
+border-radius:var(--radius-sm);
 
 font-size:12px;
 
 font-weight:500;
 
-color:#334155;
+margin-right:8px;
 
 cursor:pointer;
 
-margin-right:10px;
-
 transition:
+
 background .14s ease,
 border-color .14s ease,
+box-shadow .14s ease;
+
+}
+
+
+/* FILE BUTTON HOVER */
+
+input[type="file"]::file-selector-button:hover{
+
+background:#f1f5f9;
+
+border-color:#cbd5e1;
+
+}
+
+
+/* FILE BUTTON ACTIVE */
+
+input[type="file"]::file-selector-button:active{
+
+background:#e2e8f0;
+
+}
+
+
+/* =================================
+TABLE FILE ACTIONS
+Botones dentro de tablas
+================================= */
+
+.table form{
+
+display:flex;
+
+align-items:center;
+
+gap:6px;
+
+flex-wrap:wrap;
+
+}
+
+
+/* FILE BUTTONS */
+
+.file-btn{
+
+display:inline-flex;
+
+align-items:center;
+justify-content:center;
+
+font-size:11.5px;
+
+padding:3px 8px;
+
+border-radius:var(--radius-xs);
+
+border:1px solid var(--saas-border);
+
+background:#ffffff;
+
+cursor:pointer;
+
+transition:
+
+background .12s ease,
+border-color .12s ease,
 transform .08s ease;
 
 }
 
 
-/* HOVER */
+/* FILE BTN HOVER */
 
-input[type="file"]::file-selector-button:hover{
+.file-btn:hover{
 
-background:#e2e8f0;
+background:#f8fafc;
 
 border-color:#cbd5e1;
 
@@ -1938,54 +2617,121 @@ transform:translateY(-1px);
 }
 
 
-/* ACTIVE */
+/* FILE BTN PRIMARY */
 
-input[type="file"]::file-selector-button:active{
+.file-btn.primary{
 
-transform:translateY(0);
+background:var(--saas-primary);
+
+border-color:var(--saas-primary);
+
+color:#ffffff;
+
+}
+
+.file-btn.primary:hover{
+
+background:var(--saas-primary-hover);
 
 }
 
 
-/* UPLOAD FIELD */
+/* FILE BTN SUCCESS */
 
-.upload-field{
+.file-btn.success{
+
+background:var(--saas-success);
+
+border-color:var(--saas-success);
+
+color:#ffffff;
+
+}
+
+.file-btn.success:hover{
+
+background:#059669;
+
+}
+
+
+/* FILE BTN SECONDARY */
+
+.file-btn.secondary{
+
+background:#6b7280;
+
+border-color:#6b7280;
+
+color:#ffffff;
+
+}
+
+.file-btn.secondary:hover{
+
+background:#4b5563;
+
+}
+
+
+/* =================================
+HIDDEN FILE INPUT
+================================= */
+
+.file-hidden{
+
+display:none;
+
+}
+
+
+/* =================================
+UPLOAD GROUP
+================================= */
+
+.upload-group{
 
 display:flex;
 
 align-items:center;
 
-gap:10px;
+gap:8px;
+
+flex-wrap:wrap;
 
 }
 
 
-/* FILE NAME */
+/* =================================
+FILE PREVIEW LINK
+================================= */
 
-.upload-filename{
+.file-link{
 
 font-size:12px;
 
-color:var(--saas-text-muted);
+font-weight:500;
+
+color:var(--saas-primary);
+
+text-decoration:none;
 
 }
 
+.file-link:hover{
 
-/* SMALL VERSION */
-
-.upload-sm input[type="file"]::file-selector-button{
-
-padding:4px 10px;
-
-font-size:11px;
-
-border-radius:6px;
+text-decoration:underline;
 
 }
+
 
 /* =================================
 BLOQUE 11 — TABLE TOOLBAR
+Barra de herramientas para tablas SaaS
 ================================= */
+
+
+/* TOOLBAR CONTAINER */
 
 .table-toolbar{
 
@@ -1997,18 +2743,18 @@ justify-content:space-between;
 
 gap:12px;
 
-padding:14px 18px;
-
-background:var(--saas-card);
+padding:12px 16px;
 
 border-bottom:1px solid var(--saas-border-soft);
+
+background:#ffffff;
 
 flex-wrap:wrap;
 
 }
 
 
-/* LEFT */
+/* LEFT SECTION */
 
 .table-toolbar-left{
 
@@ -2016,14 +2762,14 @@ display:flex;
 
 align-items:center;
 
-gap:10px;
+gap:8px;
 
 flex-wrap:wrap;
 
 }
 
 
-/* RIGHT */
+/* RIGHT SECTION */
 
 .table-toolbar-right{
 
@@ -2038,7 +2784,7 @@ flex-wrap:wrap;
 }
 
 
-/* SEARCH */
+/* SEARCH INPUT */
 
 .table-search{
 
@@ -2052,21 +2798,24 @@ align-items:center;
 
 .table-search input{
 
-height:32px;
+height:30px;
 
-font-size:12.5px;
+padding:5px 10px;
 
-padding:6px 10px;
-
-border-radius:7px;
+padding-left:30px;
 
 border:1px solid var(--saas-border);
+
+border-radius:var(--radius-sm);
+
+font-size:12.5px;
 
 background:#ffffff;
 
 min-width:180px;
 
 transition:
+
 border-color .14s ease,
 box-shadow .14s ease;
 
@@ -2076,130 +2825,199 @@ box-shadow .14s ease;
 
 border-color:var(--saas-primary);
 
-box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+box-shadow:0 0 0 3px rgba(99,102,241,0.12);
 
 outline:none;
 
 }
 
 
-/* FILTER */
+/* SEARCH ICON */
 
-.toolbar-filter{
+.table-search-icon{
 
-padding:5px 10px;
+position:absolute;
 
-font-size:12px;
-
-border-radius:6px;
-
-border:1px solid var(--saas-border);
-
-background:#ffffff;
-
-cursor:pointer;
-
-transition:
-background .14s ease,
-border-color .14s ease;
-
-}
-
-.toolbar-filter:hover{
-
-background:#f8fafc;
-
-border-color:#cbd5e1;
-
-}
-
-
-/* EXPORT */
-
-.toolbar-export{
-
-padding:5px 10px;
-
-font-size:12px;
-
-border-radius:6px;
-
-border:1px solid var(--saas-border);
-
-background:#ffffff;
-
-cursor:pointer;
-
-transition:
-background .14s ease,
-border-color .14s ease;
-
-}
-
-.toolbar-export:hover{
-
-background:#f8fafc;
-
-border-color:#cbd5e1;
-
-}
-
-
-/* INFO */
-
-.table-info{
+left:9px;
 
 font-size:12px;
 
 color:var(--saas-text-muted);
 
-}
-
-
-/* DIVIDER */
-
-.toolbar-divider{
-
-width:1px;
-
-height:20px;
-
-background:var(--saas-border);
-
-margin:0 4px;
+pointer-events:none;
 
 }
 
 
-/* RESPONSIVE */
+/* FILTER BUTTON */
 
-@media (max-width:768px){
+.table-filter{
 
-.table-toolbar{
+display:inline-flex;
 
-flex-direction:column;
+align-items:center;
 
-align-items:flex-start;
+gap:5px;
 
-gap:10px;
+padding:5px 10px;
+
+font-size:12px;
+
+border-radius:var(--radius-sm);
+
+border:1px solid var(--saas-border);
+
+background:#ffffff;
+
+cursor:pointer;
+
+transition:
+
+background .14s ease,
+border-color .14s ease;
 
 }
 
-.table-toolbar-right{
+.table-filter:hover{
 
-width:100%;
+background:#f8fafc;
 
-justify-content:flex-start;
+border-color:#cbd5e1;
+
+}
+
+
+/* EXPORT BUTTON */
+
+.table-export{
+
+display:inline-flex;
+
+align-items:center;
+
+gap:5px;
+
+padding:5px 10px;
+
+font-size:12px;
+
+border-radius:var(--radius-sm);
+
+border:1px solid var(--saas-border);
+
+background:#ffffff;
+
+cursor:pointer;
+
+transition:
+
+background .14s ease,
+border-color .14s ease;
 
 }
 
+.table-export:hover{
+
+background:#f8fafc;
+
+border-color:#cbd5e1;
+
 }
+
+
+/* BULK ACTIONS */
+
+.table-bulk-actions{
+
+display:flex;
+
+align-items:center;
+
+gap:6px;
+
+font-size:12px;
+
+}
+
+
+/* BULK SELECT CHECKBOX */
+
+.table-select{
+
+width:14px;
+height:14px;
+
+cursor:pointer;
+
+}
+
+
+/* PAGINATION */
+
+.table-pagination{
+
+display:flex;
+
+align-items:center;
+
+gap:6px;
+
+margin-top:10px;
+
+font-size:12px;
+
+}
+
+
+/* PAGE BUTTON */
+
+.page-btn{
+
+padding:4px 8px;
+
+border:1px solid var(--saas-border);
+
+background:#ffffff;
+
+border-radius:var(--radius-xs);
+
+cursor:pointer;
+
+transition:
+
+background .12s ease,
+border-color .12s ease;
+
+}
+
+.page-btn:hover{
+
+background:#f1f5f9;
+
+border-color:#cbd5e1;
+
+}
+
+.page-btn.active{
+
+background:var(--saas-primary);
+
+border-color:var(--saas-primary);
+
+color:#ffffff;
+
+}
+
 
 /* =================================
 BLOQUE 12 — UI STATES
+Estados visuales del sistema
 ================================= */
 
-/* EMPTY STATE */
+
+/* =================================
+EMPTY STATE
+================================= */
 
 .empty-state{
 
@@ -2213,15 +3031,354 @@ justify-content:center;
 
 text-align:center;
 
-padding:48px 24px;
+padding:40px 20px;
+
+gap:8px;
 
 color:var(--saas-text-muted);
 
-gap:10px;
+}
+
+
+/* EMPTY TITLE */
+
+.empty-title{
+
+font-size:14px;
+
+font-weight:600;
+
+color:var(--saas-text);
 
 }
 
-.empty-title{
+
+/* EMPTY DESCRIPTION */
+
+.empty-description{
+
+font-size:12.5px;
+
+color:var(--saas-text-muted);
+
+max-width:320px;
+
+}
+
+
+/* EMPTY ICON */
+
+.empty-icon{
+
+font-size:28px;
+
+opacity:.5;
+
+margin-bottom:6px;
+
+}
+
+
+/* =================================
+LOADING STATE
+================================= */
+
+.loading{
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+gap:8px;
+
+padding:24px;
+
+font-size:13px;
+
+color:var(--saas-text-muted);
+
+}
+
+
+/* LOADING SPINNER */
+
+.spinner{
+
+width:16px;
+height:16px;
+
+border:2px solid #e5e7eb;
+
+border-top:2px solid var(--saas-primary);
+
+border-radius:50%;
+
+animation:spin .7s linear infinite;
+
+}
+
+
+/* SPIN ANIMATION */
+
+@keyframes spin{
+
+to{
+transform:rotate(360deg);
+}
+
+}
+
+
+/* =================================
+ALERT BASE
+================================= */
+
+.alert{
+
+padding:10px 12px;
+
+border-radius:var(--radius-md);
+
+font-size:12.5px;
+
+border:1px solid transparent;
+
+display:flex;
+
+align-items:center;
+
+gap:8px;
+
+}
+
+
+/* ALERT SUCCESS */
+
+.alert-success{
+
+background:var(--saas-success-soft);
+
+border-color:#a7f3d0;
+
+color:#065f46;
+
+}
+
+
+/* ALERT WARNING */
+
+.alert-warning{
+
+background:var(--saas-warning-soft);
+
+border-color:#fde68a;
+
+color:#92400e;
+
+}
+
+
+/* ALERT ERROR */
+
+.alert-danger{
+
+background:var(--saas-danger-soft);
+
+border-color:#fecaca;
+
+color:#991b1b;
+
+}
+
+
+/* ALERT INFO */
+
+.alert-info{
+
+background:#eef2ff;
+
+border-color:#c7d2fe;
+
+color:#3730a3;
+
+}
+
+
+/* =================================
+BADGE VARIANTS
+================================= */
+
+.badge-soft{
+
+background:#f1f5f9;
+
+color:#475569;
+
+border:1px solid #e2e8f0;
+
+}
+
+
+/* =================================
+PROGRESS BAR
+================================= */
+
+.progress{
+
+height:6px;
+
+background:#e5e7eb;
+
+border-radius:var(--radius-xs);
+
+overflow:hidden;
+
+}
+
+.progress-bar{
+
+height:100%;
+
+background:var(--saas-primary);
+
+transition:width .2s ease;
+
+}
+
+
+/* =================================
+SKELETON LOADING
+================================= */
+
+.skeleton{
+
+background:linear-gradient(
+90deg,
+#f1f5f9 25%,
+#e2e8f0 37%,
+#f1f5f9 63%
+);
+
+background-size:400% 100%;
+
+animation:skeletonLoading 1.4s ease infinite;
+
+border-radius:var(--radius-sm);
+
+height:12px;
+
+}
+
+@keyframes skeletonLoading{
+
+0%{background-position:100% 0}
+100%{background-position:-100% 0}
+
+}
+
+
+/* =================================
+BLOQUE 13 — MODALS
+Ventanas modales estilo SaaS
+================================= */
+
+
+/* MODAL OVERLAY */
+
+.modal-overlay{
+
+position:fixed;
+
+top:0;
+left:0;
+
+width:100%;
+height:100%;
+
+background:rgba(15,23,42,0.45);
+
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+z-index:1000;
+
+padding:20px;
+
+}
+
+
+/* MODAL CONTAINER */
+
+.modal{
+
+background:#ffffff;
+
+border-radius:var(--radius-lg);
+
+box-shadow:var(--shadow-lg);
+
+width:100%;
+
+max-width:520px;
+
+display:flex;
+
+flex-direction:column;
+
+overflow:hidden;
+
+animation:modalFade .18s ease;
+
+}
+
+
+/* MODAL ANIMATION */
+
+@keyframes modalFade{
+
+from{
+
+opacity:0;
+transform:translateY(8px);
+
+}
+
+to{
+
+opacity:1;
+transform:translateY(0);
+
+}
+
+}
+
+
+/* =================================
+MODAL HEADER
+================================= */
+
+.modal-header{
+
+display:flex;
+
+align-items:center;
+
+justify-content:space-between;
+
+padding:16px 20px;
+
+border-bottom:1px solid var(--saas-border-soft);
+
+}
+
+
+/* TITLE */
+
+.modal-title{
 
 font-size:15px;
 
@@ -2231,500 +3388,174 @@ color:var(--saas-text);
 
 }
 
-.empty-description{
 
-font-size:13px;
+/* CLOSE BUTTON */
 
-max-width:420px;
+.modal-close{
 
-line-height:1.5;
-
-}
-
-.empty-actions{
-
-margin-top:10px;
-
-display:flex;
-
-gap:8px;
-
-flex-wrap:wrap;
-
-justify-content:center;
-
-}
-
-
-/* TABLE EMPTY */
-
-.table-empty{
-
-padding:36px;
-
-text-align:center;
-
-font-size:13px;
-
-color:var(--saas-text-muted);
-
-}
-
-
-/* LOADING */
-
-.loading-state{
-
-display:flex;
-
-align-items:center;
-
-justify-content:center;
-
-padding:40px;
-
-gap:10px;
-
-font-size:13px;
-
-color:var(--saas-text-muted);
-
-}
-
-.loading-spinner{
-
-width:18px;
-
-height:18px;
-
-border:2px solid var(--saas-border);
-
-border-top:2px solid var(--saas-primary);
-
-border-radius:50%;
-
-animation:saasSpin .7s linear infinite;
-
-}
-
-@keyframes saasSpin{
-
-from{ transform:rotate(0deg); }
-
-to{ transform:rotate(360deg); }
-
-}
-
-
-/* MESSAGES */
-
-.ui-message{
-
-display:flex;
-
-align-items:center;
-
-gap:10px;
-
-padding:12px 14px;
-
-border-radius:8px;
-
-font-size:12.5px;
-
-border:1px solid var(--saas-border);
-
-background:var(--saas-bg-soft);
-
-color:#374151;
-
-}
-
-.ui-message.success{
-
-border-color:#d1fae5;
-
-background:#ecfdf5;
-
-color:#065f46;
-
-}
-
-.ui-message.warning{
-
-border-color:#fde68a;
-
-background:#fffbeb;
-
-color:#92400e;
-
-}
-
-.ui-message.error{
-
-border-color:#fecaca;
-
-background:#fef2f2;
-
-color:#991b1b;
-
-}
-
-
-/* SKELETON */
-
-.skeleton{
-
-background:linear-gradient(
-90deg,
-#f1f5f9 25%,
-#e5e7eb 37%,
-#f1f5f9 63%
-);
-
-background-size:400% 100%;
-
-animation:skeletonLoading 1.2s ease infinite;
-
-border-radius:6px;
-
-}
-
-@keyframes skeletonLoading{
-
-0%{ background-position:100% 50%; }
-
-100%{ background-position:0 50%; }
-
-}
-
-/* =================================
-BLOQUE 13 — MODALS
-================================= */
-
-.modal-backdrop.show{
-
-background:rgba(15,23,42,0.45);
-
-backdrop-filter:blur(3px);
-
-}
-
-
-/* MODAL CONTENT */
-
-.modal-content{
+background:none;
 
 border:none;
 
-border-radius:14px;
-
-box-shadow:
-
-0 10px 40px rgba(0,0,0,0.15),
-0 2px 8px rgba(0,0,0,0.08);
-
-overflow:hidden;
-
-}
-
-
-/* HEADER */
-
-.modal-header{
-
-border-bottom:1px solid var(--saas-border-soft);
-
-padding:18px 22px;
-
-background:#ffffff;
-
-display:flex;
-
-align-items:center;
-
-justify-content:space-between;
-
-}
-
-
-/* TITLE */
-
-.modal-title{
-
 font-size:16px;
 
-font-weight:600;
+color:var(--saas-text-muted);
 
-letter-spacing:-0.01em;
+cursor:pointer;
+
+transition:color .12s ease;
+
+}
+
+.modal-close:hover{
 
 color:var(--saas-text);
 
 }
 
 
-/* CLOSE BUTTON */
-
-.modal-header .btn-close{
-
-background:transparent;
-
-border:none;
-
-opacity:.6;
-
-transition:opacity .14s ease;
-
-}
-
-.modal-header .btn-close:hover{
-
-opacity:1;
-
-}
-
-
-/* BODY */
+/* =================================
+MODAL BODY
+================================= */
 
 .modal-body{
 
-padding:20px 22px;
+padding:20px;
 
-font-size:13.5px;
+font-size:13px;
 
-color:#374151;
+color:var(--saas-text-muted);
 
 line-height:1.5;
 
 }
 
 
-/* FOOTER */
+/* =================================
+MODAL FOOTER
+================================= */
 
 .modal-footer{
 
-border-top:1px solid var(--saas-border-soft);
-
-padding:14px 22px;
-
 display:flex;
+
+align-items:center;
 
 justify-content:flex-end;
 
 gap:8px;
 
-}
+padding:14px 20px;
 
-
-/* CONFIRM STYLE */
-
-.modal-confirm{
-
-text-align:center;
-
-padding-top:10px;
-
-}
-
-.modal-confirm .modal-title{
-
-font-size:17px;
+border-top:1px solid var(--saas-border-soft);
 
 }
 
 
-/* BUTTON ALIGNMENT */
+/* =================================
+SMALL MODAL
+================================= */
 
-.modal-footer .btn{
+.modal-sm{
 
-min-width:90px;
-
-}
-
-
-/* ANIMATION */
-
-.modal.fade .modal-dialog{
-
-transform:translateY(8px);
-
-transition:
-
-transform .18s ease,
-opacity .18s ease;
-
-}
-
-.modal.show .modal-dialog{
-
-transform:translateY(0);
+max-width:380px;
 
 }
 
 
-/* SMALL */
+/* =================================
+LARGE MODAL
+================================= */
 
-.modal-sm .modal-content{
+.modal-lg{
 
-border-radius:12px;
+max-width:720px;
+
+}
+
+
+/* =================================
+FULLSCREEN MODAL
+================================= */
+
+.modal-full{
+
+max-width:95%;
+
+height:90%;
 
 }
 
-
-/* LARGE */
-
-.modal-lg .modal-content{
-
-border-radius:16px;
-
-}
 
 /* =================================
 BLOQUE 14 — DROPDOWNS
+Componentes desplegables estilo SaaS
 ================================= */
+
+
+/* DROPDOWN CONTAINER */
+
+.dropdown{
+
+position:relative;
+
+display:inline-block;
+
+}
+
+
+/* DROPDOWN TOGGLE */
+
+.dropdown-toggle{
+
+display:inline-flex;
+
+align-items:center;
+
+gap:6px;
+
+cursor:pointer;
+
+}
+
+
+/* DROPDOWN MENU */
 
 .dropdown-menu{
 
+position:absolute;
+
+top:100%;
+right:0;
+
+min-width:160px;
+
+background:#ffffff;
+
 border:1px solid var(--saas-border);
 
-border-radius:10px;
+border-radius:var(--radius-md);
+
+box-shadow:var(--shadow-md);
 
 padding:6px;
 
-min-width:180px;
+margin-top:6px;
 
-box-shadow:
+z-index:100;
 
-0 10px 30px rgba(0,0,0,0.08),
-0 2px 8px rgba(0,0,0,0.04);
-
-background:#ffffff;
+display:none;
 
 animation:dropdownFade .14s ease;
 
 }
 
 
-/* ITEM */
+/* OPEN STATE */
 
-.dropdown-item{
+.dropdown.open .dropdown-menu{
 
-display:flex;
-
-align-items:center;
-
-gap:8px;
-
-font-size:13px;
-
-padding:7px 10px;
-
-border-radius:6px;
-
-color:#374151;
-
-font-weight:500;
-
-transition:
-
-background .12s ease,
-color .12s ease;
-
-}
-
-
-/* HOVER */
-
-.dropdown-item:hover{
-
-background:#f1f5f9;
-
-color:var(--saas-text);
-
-}
-
-
-/* ACTIVE */
-
-.dropdown-item.active{
-
-background:var(--saas-primary);
-
-color:#ffffff;
-
-}
-
-
-/* DIVIDER */
-
-.dropdown-divider{
-
-margin:6px 4px;
-
-border-top:1px solid var(--saas-border-soft);
-
-}
-
-
-/* HEADER */
-
-.dropdown-header{
-
-font-size:11px;
-
-font-weight:600;
-
-letter-spacing:.04em;
-
-text-transform:uppercase;
-
-color:#9ca3af;
-
-padding:6px 10px;
-
-}
-
-
-/* ICON */
-
-.dropdown-item i{
-
-font-size:13px;
-
-opacity:.75;
-
-}
-
-
-/* TOGGLE */
-
-.dropdown-toggle::after{
-
-margin-left:6px;
-
-opacity:.6;
-
-}
-
-
-/* TABLE ACTION DROPDOWN */
-
-.table .dropdown-menu{
-
-min-width:140px;
-
-}
-
-
-/* USER MENU */
-
-.user-menu .dropdown-menu{
-
-right:0;
-
-left:auto;
-
-min-width:160px;
+display:block;
 
 }
 
@@ -2736,72 +3567,757 @@ min-width:160px;
 from{
 
 opacity:0;
-
-transform:translateY(-4px);
+transform:translateY(6px);
 
 }
 
 to{
 
 opacity:1;
-
 transform:translateY(0);
 
 }
 
 }
 
+
 /* =================================
-LOGIN LAYOUT
+DROPDOWN ITEM
 ================================= */
 
-.login-wrapper{
+.dropdown-item{
 
 display:flex;
 
 align-items:center;
 
-justify-content:center;
+gap:8px;
 
-height:calc(100vh - 60px);
+font-size:12.5px;
+
+padding:7px 10px;
+
+border-radius:var(--radius-sm);
+
+cursor:pointer;
+
+color:var(--saas-text);
+
+text-decoration:none;
+
+transition:
+
+background .12s ease,
+color .12s ease;
 
 }
+
+
+/* ITEM HOVER */
+
+.dropdown-item:hover{
+
+background:#f1f5f9;
+
+color:var(--saas-text);
+
+}
+
+
+/* ITEM ACTIVE */
+
+.dropdown-item.active{
+
+background:var(--saas-primary);
+
+color:#ffffff;
+
+}
+
+
+/* ITEM DISABLED */
+
+.dropdown-item.disabled{
+
+opacity:.5;
+
+cursor:not-allowed;
+
+}
+
+
+/* =================================
+DROPDOWN DIVIDER
+================================= */
+
+.dropdown-divider{
+
+height:1px;
+
+background:var(--saas-border-soft);
+
+margin:4px 0;
+
+}
+
+
+/* =================================
+DROPDOWN ICON
+================================= */
+
+.dropdown-icon{
+
+font-size:13px;
+
+opacity:.7;
+
+}
+
+
+/* =================================
+RIGHT ALIGN
+================================= */
+
+.dropdown-right .dropdown-menu{
+
+right:0;
+left:auto;
+
+}
+
+
+/* LEFT ALIGN */
+
+.dropdown-left .dropdown-menu{
+
+left:0;
+right:auto;
+
+}
+
+
+/* =================================
+BLOQUE 15 — MICROINTERACTIONS
+Microinteracciones SaaS premium
+================================= */
+
+
+/* =================================
+CARD HOVER
+================================= */
+
+.card,
+.metric-card,
+.table-card{
+
+transition:
+
+transform .18s ease,
+box-shadow .18s ease,
+border-color .18s ease;
+
+}
+
+.card:hover,
+.metric-card:hover,
+.table-card:hover{
+
+transform:translateY(-2px);
+
+box-shadow:var(--shadow-md);
+
+}
+
+
+/* =================================
+BUTTON INTERACTION
+================================= */
+
+.btn{
+
+transition:
+
+transform .08s ease,
+box-shadow .14s ease,
+background .14s ease,
+border-color .14s ease;
+
+}
+
+.btn:hover{
+
+transform:translateY(-1px);
+
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+
+}
+
+.btn:active{
+
+transform:translateY(0);
+
+box-shadow:0 2px 6px rgba(0,0,0,0.08);
+
+}
+
+
+/* =================================
+SIDEBAR LINK INTERACTION
+================================= */
+
+.sidebar-link{
+
+transition:
+
+background .14s ease,
+color .14s ease,
+transform .12s ease;
+
+}
+
+.sidebar-link:hover{
+
+transform:translateX(3px);
+
+}
+
+
+/* =================================
+TABLE ROW INTERACTION
+================================= */
+
+.table tbody tr{
+
+transition:
+
+background .12s ease,
+transform .06s ease;
+
+}
+
+.table tbody tr:hover{
+
+background:#f8fafc;
+
+transform:scale(1.002);
+
+}
+
+
+/* =================================
+INPUT INTERACTION
+================================= */
+
+.form-control,
+.form-select{
+
+transition:
+
+border-color .14s ease,
+box-shadow .14s ease,
+background .14s ease;
+
+}
+
+.form-control:hover,
+.form-select:hover{
+
+border-color:#cbd5e1;
+
+}
+
+
+/* =================================
+ICON BUTTON INTERACTION
+================================= */
+
+.btn-icon{
+
+transition:
+
+transform .12s ease,
+box-shadow .12s ease;
+
+}
+
+.btn-icon:hover{
+
+transform:translateY(-1px);
+
+box-shadow:0 3px 8px rgba(0,0,0,0.08);
+
+}
+
+
+/* =================================
+DROPDOWN INTERACTION
+================================= */
+
+.dropdown-menu{
+
+transform-origin:top right;
+
+}
+
+
+/* =================================
+TABLE ACTION BUTTONS
+================================= */
+
+.table .btn{
+
+transition:
+
+transform .08s ease,
+box-shadow .12s ease;
+
+}
+
+.table .btn:hover{
+
+transform:translateY(-1px);
+
+box-shadow:0 2px 6px rgba(0,0,0,0.08);
+
+}
+
+
+/* =================================
+BLOQUE 16 — RADIUS SYSTEM
+Sistema de consistencia visual
+================================= */
+
+
+/* =================================
+RADIUS SCALE
+================================= */
+
+.radius-xs{
+border-radius:var(--radius-xs);
+}
+
+.radius-sm{
+border-radius:var(--radius-sm);
+}
+
+.radius-md{
+border-radius:var(--radius-md);
+}
+
+.radius-lg{
+border-radius:var(--radius-lg);
+}
+
+.radius-xl{
+border-radius:var(--radius-xl);
+}
+
+
+/* =================================
+GLOBAL RADIUS APPLICATION
+Elementos principales del sistema
+================================= */
+
+.card,
+.metric-card,
+.table-card,
+.form-card,
+.modal{
+
+border-radius:var(--radius-lg);
+
+}
+
+.btn{
+
+border-radius:var(--radius-sm);
+
+}
+
+.btn-sm,
+.table .btn{
+
+border-radius:var(--radius-xs);
+
+}
+
+.form-control,
+.form-select{
+
+border-radius:var(--radius-md);
+
+}
+
+.dropdown-menu{
+
+border-radius:var(--radius-md);
+
+}
+
+.badge{
+
+border-radius:var(--radius-sm);
+
+}
+
+
+/* =================================
+INPUT GROUP
+================================= */
+
+.input-group{
+
+display:flex;
+
+align-items:center;
+
+}
+
+.input-group .form-control{
+
+border-top-left-radius:var(--radius-md);
+border-bottom-left-radius:var(--radius-md);
+
+}
+
+.input-group .btn{
+
+border-top-right-radius:var(--radius-md);
+border-bottom-right-radius:var(--radius-md);
+
+}
+
+
+/* =================================
+CARD HEADER FIX
+================================= */
+
+.card-header{
+
+border-top-left-radius:var(--radius-lg);
+border-top-right-radius:var(--radius-lg);
+
+}
+
+.card-footer{
+
+border-bottom-left-radius:var(--radius-lg);
+border-bottom-right-radius:var(--radius-lg);
+
+}
+
+
+/* =================================
+TABLE FIX
+================================= */
+
+.table-responsive{
+
+border-radius:var(--radius-lg);
+
+overflow:hidden;
+
+}
+
+
+/* =================================
+AVATAR
+================================= */
+
+.user-avatar{
+
+border-radius:50%;
+
+}
+
+
+/* =================================
+BLOQUE 17 — ACCENT COLORS
+Sistema de acentos visuales SaaS
+================================= */
+
+
+/* =================================
+ACCENT BORDER LEFT
+Para métricas o indicadores
+================================= */
+
+.accent-primary{
+border-left:4px solid var(--saas-primary);
+}
+
+.accent-success{
+border-left:4px solid var(--saas-success);
+}
+
+.accent-warning{
+border-left:4px solid var(--saas-warning);
+}
+
+.accent-danger{
+border-left:4px solid var(--saas-danger);
+}
+
+.accent-accent{
+border-left:4px solid var(--saas-accent);
+}
+
+
+/* =================================
+SOFT ACCENT BACKGROUNDS
+================================= */
+
+.bg-primary-soft{
+background:rgba(99,102,241,0.08);
+color:var(--saas-primary);
+}
+
+.bg-success-soft{
+background:var(--saas-success-soft);
+color:#065f46;
+}
+
+.bg-warning-soft{
+background:var(--saas-warning-soft);
+color:#92400e;
+}
+
+.bg-danger-soft{
+background:var(--saas-danger-soft);
+color:#991b1b;
+}
+
+.bg-accent-soft{
+background:var(--saas-accent-soft);
+color:#0e7490;
+}
+
+
+/* =================================
+ACCENT TEXT
+================================= */
+
+.text-primary-accent{
+color:var(--saas-primary);
+}
+
+.text-success-accent{
+color:var(--saas-success);
+}
+
+.text-warning-accent{
+color:var(--saas-warning);
+}
+
+.text-danger-accent{
+color:var(--saas-danger);
+}
+
+.text-accent{
+color:var(--saas-accent);
+}
+
+
+/* =================================
+ACCENT ICONS
+================================= */
+
+.icon-primary{
+color:var(--saas-primary);
+}
+
+.icon-success{
+color:var(--saas-success);
+}
+
+.icon-warning{
+color:var(--saas-warning);
+}
+
+.icon-danger{
+color:var(--saas-danger);
+}
+
+.icon-accent{
+color:var(--saas-accent);
+}
+
+
+/* =================================
+ACCENT CARDS
+================================= */
+
+.card-accent-primary{
+border-color:rgba(99,102,241,0.3);
+}
+
+.card-accent-success{
+border-color:rgba(16,185,129,0.3);
+}
+
+.card-accent-warning{
+border-color:rgba(245,158,11,0.3);
+}
+
+.card-accent-danger{
+border-color:rgba(239,68,68,0.3);
+}
+
+
+/* =================================
+ACCENT BADGES
+================================= */
+
+.badge-primary-soft{
+background:rgba(99,102,241,0.1);
+color:var(--saas-primary);
+border:1px solid rgba(99,102,241,0.2);
+}
+
+.badge-success-soft{
+background:var(--saas-success-soft);
+color:#065f46;
+border:1px solid #a7f3d0;
+}
+
+.badge-warning-soft{
+background:var(--saas-warning-soft);
+color:#92400e;
+border:1px solid #fde68a;
+}
+
+.badge-danger-soft{
+background:var(--saas-danger-soft);
+color:#991b1b;
+border:1px solid #fecaca;
+}
+
+
+/* =================================
+BLOQUE 18 — LOGIN PREMIUM
+Pantalla de acceso estilo SaaS
+================================= */
+
+
+/* LOGIN WRAPPER */
+
+.login-wrapper{
+
+min-height:100vh;
+
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+background:linear-gradient(
+135deg,
+#f6f8fb 0%,
+#eef2ff 100%
+);
+
+padding:24px;
+
+}
+
+
+/* LOGIN CONTAINER */
+
+.login-container{
+
+width:100%;
+
+max-width:420px;
+
+}
+
 
 /* LOGIN CARD */
 
 .login-card{
 
-width:380px;
-
 background:#ffffff;
 
-border:1px solid #e5e7eb;
+border:1px solid var(--saas-border);
 
-border-radius:14px;
+border-radius:var(--radius-xl);
 
 padding:32px;
 
-box-shadow:
-0 10px 30px rgba(0,0,0,0.08),
-0 2px 8px rgba(0,0,0,0.04);
+box-shadow:var(--shadow-lg);
+
+display:flex;
+
+flex-direction:column;
+
+gap:18px;
+
+animation:loginFade .25s ease;
 
 }
 
-/* TITLE */
+
+/* LOGIN ANIMATION */
+
+@keyframes loginFade{
+
+from{
+
+opacity:0;
+transform:translateY(8px);
+
+}
+
+to{
+
+opacity:1;
+transform:translateY(0);
+
+}
+
+}
+
+
+/* LOGIN HEADER */
+
+.login-header{
+
+text-align:center;
+
+margin-bottom:6px;
+
+}
+
+
+/* LOGIN TITLE */
 
 .login-title{
 
-font-size:18px;
+font-size:22px;
 
-font-weight:600;
+font-weight:650;
 
-margin-bottom:20px;
+letter-spacing:-0.02em;
 
-color:#111827;
+color:var(--saas-text);
+
+margin-bottom:4px;
 
 }
 
-/* FORM */
+
+/* LOGIN SUBTITLE */
+
+.login-subtitle{
+
+font-size:13px;
+
+color:var(--saas-text-muted);
+
+}
+
+
+/* LOGIN FORM */
 
 .login-form{
 
@@ -2809,30 +4325,210 @@ display:flex;
 
 flex-direction:column;
 
-gap:16px;
+gap:12px;
 
 }
 
-/* BUTTON */
 
-.login-btn{
+/* LOGIN INPUT */
 
-width:100%;
+.login-form .form-control{
+
+height:38px;
+
+font-size:13px;
+
+}
+
+
+/* LOGIN BUTTON */
+
+.login-form .btn{
+
+margin-top:4px;
+
+height:38px;
+
+font-size:13px;
+
+font-weight:600;
+
+}
+
+
+/* LOGIN FOOTER */
+
+.login-footer{
 
 margin-top:8px;
 
+font-size:12px;
+
+text-align:center;
+
+color:var(--saas-text-muted);
+
 }
 
-.btn-subir{
-    background:#16a34a;
-    color:white;
-    border:none;
-    padding:6px 12px;
-    border-radius:6px;
-    cursor:pointer;
-    font-size:13px;
+
+/* LOGIN SMALL TEXT */
+
+.login-small{
+
+font-size:11px;
+
+color:#9ca3af;
+
+text-align:center;
+
 }
 
-.btn-subir:hover{
-    background:#15803d;
+
+/* LOGIN BRAND */
+
+.login-brand{
+
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+gap:6px;
+
+font-weight:600;
+
+font-size:14px;
+
+color:var(--saas-text);
+
+margin-bottom:12px;
+
+}
+
+
+/* LOGIN ICON */
+
+.login-icon{
+
+font-size:18px;
+
+color:var(--saas-primary);
+
+}
+
+
+/* =================================
+BLOQUE 19 — PAGE TRANSITIONS
+Animaciones suaves entre páginas
+================================= */
+
+
+/* PAGE WRAPPER ANIMATION */
+
+.page-wrapper{
+
+animation:pageFade .28s ease;
+
+}
+
+
+/* PAGE FADE */
+
+@keyframes pageFade{
+
+from{
+
+opacity:0;
+transform:translateY(6px);
+
+}
+
+to{
+
+opacity:1;
+transform:translateY(0);
+
+}
+
+}
+
+
+/* TABLE FADE */
+
+.table-card{
+
+animation:tableFade .32s ease;
+
+}
+
+@keyframes tableFade{
+
+from{
+
+opacity:0;
+transform:translateY(4px);
+
+}
+
+to{
+
+opacity:1;
+transform:translateY(0);
+
+}
+
+}
+
+
+/* FORM FADE */
+
+.form-card{
+
+animation:formFade .28s ease;
+
+}
+
+@keyframes formFade{
+
+from{
+
+opacity:0;
+transform:translateY(6px);
+
+}
+
+to{
+
+opacity:1;
+transform:translateY(0);
+
+}
+
+}
+
+
+/* METRIC CARDS DELAY */
+
+.metric-card{
+
+animation:metricFade .35s ease;
+
+}
+
+@keyframes metricFade{
+
+from{
+
+opacity:0;
+transform:translateY(8px);
+
+}
+
+to{
+
+opacity:1;
+transform:translateY(0);
+
+}
+
 }

@@ -5,72 +5,136 @@
 
 {% block content %}
 
-<div class="container-fluid">
+<div class="row g-4 mb-4">
 
-<div class="row g-3 mb-4">
-
-<div class="col-md-3">
-<div class="card metric-card">
+<div class="col-xl-3 col-md-6">
+<div class="card metric-card h-100">
 <div class="card-body">
-<div class="metric-title">Clientes Activos</div>
-<div class="metric-value">{{ total_activos }}</div>
+
+<div class="metric-header">
+<div class="metric-title">
+Clientes Activos
+</div>
+<div class="metric-icon">
+👤
+</div>
+</div>
+
+<div class="metric-value text-success">
+{{ total_activos }}
+</div>
+
 </div>
 </div>
 </div>
 
-<div class="col-md-3">
-<div class="card metric-card">
+
+<div class="col-xl-3 col-md-6">
+<div class="card metric-card h-100">
 <div class="card-body">
-<div class="metric-title">Por Vencer</div>
-<div class="metric-value">{{ total_por_vencer }}</div>
+
+<div class="metric-header">
+<div class="metric-title">
+Por Vencer
+</div>
+<div class="metric-icon">
+⏳
+</div>
+</div>
+
+<div class="metric-value text-warning">
+{{ total_por_vencer }}
+</div>
+
 </div>
 </div>
 </div>
 
-<div class="col-md-3">
-<div class="card metric-card">
+
+<div class="col-xl-3 col-md-6">
+<div class="card metric-card h-100">
 <div class="card-body">
-<div class="metric-title">Vencidos</div>
-<div class="metric-value">{{ total_vencidos }}</div>
+
+<div class="metric-header">
+<div class="metric-title">
+Vencidos
+</div>
+<div class="metric-icon">
+⚠️
+</div>
+</div>
+
+<div class="metric-value text-danger">
+{{ total_vencidos }}
+</div>
+
 </div>
 </div>
 </div>
 
-<div class="col-md-3">
-<div class="card metric-card">
+
+<div class="col-xl-3 col-md-6">
+<div class="card metric-card h-100">
 <div class="card-body">
-<div class="metric-title">Storage Usado</div>
-<div class="metric-value">{{ usado_storage }} MB</div>
-<div class="metric-sub">Disponible {{ disponible_storage }} MB</div>
+
+<div class="metric-header">
+<div class="metric-title">
+Storage Usado
+</div>
+<div class="metric-icon">
+💾
+</div>
+</div>
+
+<div class="metric-value">
+{{ usado_storage }} MB
+</div>
+
+<div class="metric-sub">
+Disponible {{ disponible_storage }} MB
+</div>
+
 </div>
 </div>
 </div>
 
 </div>
 
-<div class="mb-3">
 
-<a href="/agregar" class="btn btn-primary">
+
+<div class="card table-card">
+
+<div class="card-header d-flex justify-content-between align-items-center">
+
+<div class="table-title">
+Listado de Clientes
+</div>
+
+<div class="d-flex gap-2">
+
+<a href="/agregar" class="btn btn-primary btn-sm">
 Agregar Cliente
 </a>
 
-<a href="/contabilidad" class="btn btn-dark">
+<a href="/contabilidad" class="btn btn-dark btn-sm">
 Contabilidad
 </a>
 
-<a href="/servicios" class="btn btn-success">
+<a href="/servicios" class="btn btn-success btn-sm">
 Servicios
 </a>
 
 </div>
 
-<div class="card table-card">
+</div>
+
 
 <div class="table-responsive">
 
-<table class="table table-hover align-middle">
+<table class="table table-hover table-sm align-middle mb-0">
 
-<thead>
+<thead class="table-light">
+
 <tr>
 <th>Código</th>
 <th>Cliente</th>
@@ -79,8 +143,9 @@ Servicios
 <th>Vencimiento</th>
 <th>Correo</th>
 <th>Estado</th>
-<th>Acciones</th>
+<th class="text-end">Acciones</th>
 </tr>
+
 </thead>
 
 <tbody>
@@ -92,43 +157,73 @@ Servicios
 
 <tr>
 
-<td>{{ d[0] }}</td>
+<td class="fw-semibold">
+{{ d[0] }}
+</td>
 
-<td>{{ d[4] }}</td>
+<td>
+{{ d[4] }}
+</td>
 
-<td>{{ d[6] }}</td>
+<td>
+{{ d[6] }}
+</td>
 
-<td>{{ d[2] }} meses</td>
+<td>
+{{ d[2] }} meses
+</td>
 
-<td>{{ d[3] }}</td>
+<td>
+{{ d[3] }}
+</td>
 
-<td>{{ d[8] }}</td>
+<td>
+{{ d[8] }}
+</td>
 
 <td>
 
-{% if alerta == "vencido" %} <span class="badge bg-danger">Vencido</span>
+{% if alerta == "vencido" %}
 
-{% elif alerta == "por_vencer" %} <span class="badge bg-warning text-dark">Por vencer</span>
+<span class="badge bg-danger">
+🔴 Vencido
+</span>
 
-{% else %} <span class="badge bg-success">Activo</span>
+{% elif alerta == "por_vencer" %}
+
+<span class="badge bg-warning text-dark">
+🟡 Por vencer
+</span>
+
+{% else %}
+
+<span class="badge bg-success">
+🟢 Activo
+</span>
 
 {% endif %}
 
 </td>
 
-<td>
+<td class="text-end">
 
-<a href="/renovar/{{ d[0] }}" class="btn btn-sm btn-warning">
+<div class="d-flex justify-content-end gap-2">
+
+<a href="/renovar/{{ d[0] }}" class="btn btn-warning btn-sm">
 Renovar
 </a>
 
-<a href="/editar/{{ d[0] }}" class="btn btn-sm btn-primary">
+<a href="/editar/{{ d[0] }}" class="btn btn-primary btn-sm">
 Editar
 </a>
 
-<a href="/eliminar/{{ d[0] }}" class="btn btn-sm btn-danger"
-onclick="return confirm('¿Eliminar este cliente?')">
-Eliminar </a>
+<a href="/eliminar/{{ d[0] }}"
+class="btn btn-danger btn-sm"
+onclick="return confirm('⚠️ ¿Seguro que deseas eliminar este cliente?')">
+Eliminar
+</a>
+
+</div>
 
 </td>
 
@@ -139,8 +234,6 @@ Eliminar </a>
 </tbody>
 
 </table>
-
-</div>
 
 </div>
 

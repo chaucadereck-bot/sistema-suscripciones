@@ -5,42 +5,70 @@
 
 {% block content %}
 
-<div class="container-fluid">
-
 <div class="card form-card">
+
+<div class="card-header">
+<div class="form-title">
+Registro de Nuevo Cliente
+</div>
+</div>
 
 <div class="card-body">
 
 <form method="POST" enctype="multipart/form-data">
 
-<div class="row g-3">
+
+<!-- INFORMACIÓN DEL CLIENTE -->
+
+<div class="section-title mb-2">
+Información del Cliente
+</div>
+
+<div class="row g-4">
 
 <div class="col-md-3">
 <label class="form-label">Código Venta</label>
-<input type="text" name="codigo_venta" class="form-control" value="{{ codigo }}" readonly>
+<input
+type="text"
+name="codigo_venta"
+class="form-control"
+value="{{ codigo }}"
+readonly>
 </div>
 
 <div class="col-md-3">
-<label class="form-label">Fecha</label>
-<input type="date" name="fecha" class="form-control" required>
+<label class="form-label">Fecha de Registro</label>
+<input
+type="date"
+name="fecha"
+class="form-control"
+required>
 </div>
 
 <div class="col-md-6">
-<label class="form-label">Cliente</label>
-<input type="text" name="cliente" class="form-control" required>
+<label class="form-label">Nombre del Cliente</label>
+<input
+type="text"
+name="cliente"
+class="form-control"
+placeholder="Ej: Juan Pérez"
+required>
 </div>
 
 <div class="col-md-4">
 <label class="form-label">Teléfono</label>
-<input type="text" name="telefono" class="form-control">
+<input
+type="text"
+name="telefono"
+class="form-control"
+placeholder="Número de contacto">
 </div>
 
 <div class="col-md-4">
-<label class="form-label">Servicio</label>
+<label class="form-label">Servicio contratado</label>
 <select name="servicio" class="form-select" required>
 
 {% for s in servicios %}
-
 <option value="{{ s[0] }}">{{ s[1] }}</option>
 {% endfor %}
 
@@ -48,9 +76,27 @@
 </div>
 
 <div class="col-md-4">
-<label class="form-label">Correo Cuenta</label>
-<input type="email" name="correo_cuenta" class="form-control">
+<label class="form-label">Correo de la cuenta</label>
+<input
+type="email"
+name="correo_cuenta"
+class="form-control"
+placeholder="correo@ejemplo.com">
 </div>
+
+</div>
+
+
+<hr class="my-4">
+
+
+<!-- PROVEEDOR -->
+
+<div class="section-title mb-2">
+Proveedor del Servicio
+</div>
+
+<div class="row g-4">
 
 <div class="col-md-6">
 <label class="form-label">Proveedor existente</label>
@@ -59,7 +105,6 @@
 <option value="">Seleccionar proveedor</option>
 
 {% for p in proveedores %}
-
 <option value="{{ p[0] }}">{{ p[0] }}</option>
 {% endfor %}
 
@@ -68,36 +113,60 @@
 
 <div class="col-md-6">
 <label class="form-label">Nuevo proveedor</label>
-<input type="text" name="proveedor_nuevo" class="form-control">
+<input
+type="text"
+name="proveedor_nuevo"
+class="form-control"
+placeholder="Si no existe, escribe el proveedor">
 </div>
+
+</div>
+
+
+<hr class="my-4">
+
+
+<!-- ARCHIVOS -->
+
+<div class="section-title mb-2">
+Documentos de la Venta
+</div>
+
+<div class="row g-4">
 
 <div class="col-md-6">
 <label class="form-label">Comprobante Bancario</label>
-<input type="file" name="comprobante_banco" class="form-control" required>
+<input
+type="file"
+name="comprobante_banco"
+class="form-control"
+required>
 </div>
 
 <div class="col-md-6">
 <label class="form-label">Nota de Venta (opcional)</label>
-<input type="file" name="nota_venta" class="form-control">
+<input
+type="file"
+name="nota_venta"
+class="form-control">
 </div>
 
 </div>
 
-<div class="mt-4">
+
+<div class="form-actions mt-4 d-flex gap-2">
 
 <button type="submit" class="btn btn-primary">
 Guardar Cliente
 </button>
 
-<a href="/" class="btn btn-secondary">
+<a href="/" class="btn btn-outline-secondary">
 Cancelar
 </a>
 
 </div>
 
 </form>
-
-</div>
 
 </div>
 

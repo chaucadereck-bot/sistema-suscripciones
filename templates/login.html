@@ -1,31 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Acceso al Panel{% endblock %}
 
 {% block login_content %}
 
 <div class="login-wrapper">
 
-<div class="login-card">
+<div class="login-card shadow-sm">
 
+<div class="login-header">
 <h3 class="login-title">
-Panel de Gestión
+Gestión de Licencias
 </h3>
+<p class="login-subtitle">
+Accede al panel de administración
+</p>
+</div>
 
-<form method="POST">
+<form method="POST" class="login-form">
 
 <div class="mb-3">
 <label class="form-label">Usuario</label>
-<input type="text" name="usuario" class="form-control" required>
+<input
+type="text"
+name="usuario"
+class="form-control form-control-lg"
+placeholder="Ingrese su usuario"
+required>
 </div>
 
-<div class="mb-3">
+<div class="mb-4">
 <label class="form-label">Contraseña</label>
-<input type="password" name="password" class="form-control" required>
+<input
+type="password"
+name="password"
+class="form-control form-control-lg"
+placeholder="Ingrese su contraseña"
+required>
 </div>
 
-<button type="submit" class="btn btn-primary w-100">
-Ingresar
+<button type="submit" class="btn btn-primary w-100 btn-lg">
+Ingresar al Panel
 </button>
 
 </form>

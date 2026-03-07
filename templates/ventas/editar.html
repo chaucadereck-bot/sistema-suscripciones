@@ -5,34 +5,57 @@
 
 {% block content %}
 
-<div class="container-fluid">
-
 <div class="card form-card">
+
+<div class="card-header">
+<div class="form-title">
+Editar Información del Cliente
+</div>
+</div>
 
 <div class="card-body">
 
 <form method="POST">
 
-<div class="row g-3">
+<div class="row g-4">
 
 <div class="col-md-3">
 <label class="form-label">Código Venta</label>
-<input type="text" class="form-control" value="{{ registro[0] }}" readonly>
+<input
+type="text"
+class="form-control"
+value="{{ registro[0] }}"
+readonly>
 </div>
 
 <div class="col-md-3">
 <label class="form-label">Fecha</label>
-<input type="date" name="fecha" class="form-control" value="{{ registro[1] }}" required>
+<input
+type="date"
+name="fecha"
+class="form-control"
+value="{{ registro[1] }}"
+required>
 </div>
 
 <div class="col-md-6">
 <label class="form-label">Cliente</label>
-<input type="text" name="cliente" class="form-control" value="{{ registro[4] }}" required>
+<input
+type="text"
+name="cliente"
+class="form-control"
+value="{{ registro[4] }}"
+required>
 </div>
 
 <div class="col-md-4">
 <label class="form-label">Teléfono</label>
-<input type="text" name="telefono" class="form-control" value="{{ registro[5] }}">
+<input
+type="text"
+name="telefono"
+class="form-control"
+value="{{ registro[5] }}"
+placeholder="Número de contacto">
 </div>
 
 <div class="col-md-4">
@@ -51,27 +74,30 @@
 </div>
 
 <div class="col-md-4">
-<label class="form-label">Correo Cuenta</label>
-<input type="email" name="correo_cuenta" class="form-control" value="{{ registro[8] }}">
+<label class="form-label">Correo de la cuenta</label>
+<input
+type="email"
+name="correo_cuenta"
+class="form-control"
+value="{{ registro[8] }}"
+placeholder="correo@ejemplo.com">
 </div>
 
 </div>
 
-<div class="mt-4">
+<div class="form-actions mt-4 d-flex gap-2">
 
 <button type="submit" class="btn btn-primary">
 Guardar Cambios
 </button>
 
-<a href="/" class="btn btn-secondary">
+<a href="/" class="btn btn-outline-secondary">
 Cancelar
 </a>
 
 </div>
 
 </form>
-
-</div>
 
 </div>
 

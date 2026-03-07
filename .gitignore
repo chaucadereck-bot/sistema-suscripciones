@@ -1,19 +1,16 @@
-# Base local
-database.db
-
-# Archivos subidos localmente
-uploads/
-
-# Entorno
-.env
-
 # Python
 __pycache__/
 *.pyc
 
+# Base de datos
+*.db
+*.db-journal
+
+# VSCode
+.vscode/
+
+# uploads
+uploads/
+
 # Mac
 .DS_Store
-
-# Excel temporales
-~$*.xlsx
-._*
