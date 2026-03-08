@@ -32,6 +32,18 @@ http.headers.update({
 
 app = Flask(__name__)
 
+# ======================================
+# CONFIGURACIÓN DE SESIONES
+# ======================================
+
+app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=True
+)
+
 # Límite máximo de subida (2MB)
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
@@ -788,6 +800,14 @@ def cron_public():
     except Exception as e:
         print("Error ejecutando cron:", e)
         return "Error ejecutando cron", 500
+
+
+# ======================================
+# HEALTH CHECK
+# ======================================
+@app.route("/health")
+def health():
+    return {"status": "ok", "service": "saas-licencias"}
 
 
 # ======================================
