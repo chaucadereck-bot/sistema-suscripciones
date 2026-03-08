@@ -735,6 +735,26 @@ def cron():
 
 
 # ======================================
+# CRON PUBLICO (COMPATIBLE UPTIMEROBOT)
+# ======================================
+@app.route("/cron-public")
+def cron_public():
+
+    token = request.args.get("token")
+
+    if token != os.getenv("CRON_KEY"):
+        return "Unauthorized", 403
+
+    try:
+        revisar_vencimientos()
+        return "Cron ejecutado correctamente"
+
+    except Exception as e:
+        print("Error ejecutando cron:", e)
+        return "Error ejecutando cron", 500
+
+
+# ======================================
 # PANEL PRINCIPAL (DASHBOARD)
 # ======================================
 @app.route("/")
