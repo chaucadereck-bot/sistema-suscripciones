@@ -43,21 +43,12 @@ app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
 
-supabase = None
-USANDO_SUPABASE = False
+USANDO_SUPABASE = bool(SUPABASE_URL and SUPABASE_KEY)
 
-try:
-    if SUPABASE_URL and SUPABASE_KEY:
-        from supabase import create_client
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        USANDO_SUPABASE = True
-        print("Supabase conectado correctamente")
-    else:
-        print("Supabase no configurado")
-except Exception as e:
-    print("Error conectando a Supabase:", e)
-    supabase = None
-    USANDO_SUPABASE = False
+if USANDO_SUPABASE:
+    print("Supabase configurado correctamente")
+else:
+    print("Supabase no configurado")
 
 
 # ======================================
