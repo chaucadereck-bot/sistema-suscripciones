@@ -23,12 +23,18 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# sesión HTTP reutilizable
+
+# Sesión HTTP reutilizable (mejor rendimiento en múltiples requests)
 http = requests.Session()
+http.headers.update({
+    "User-Agent": "SaaS-Licencias/1.0"
+})
 
 app = Flask(__name__)
 
+# Límite máximo de subida (2MB)
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+
 
 # ==========================
 # CONFIGURACIÓN SUPABASE
@@ -57,9 +63,11 @@ except Exception as e:
 # ======================================
 # CONFIGURACIÓN DE SEGURIDAD
 # ======================================
+
 app.secret_key = os.getenv("SECRET_KEY")
 
 if not app.secret_key:
+    # Fallback seguro si no existe SECRET_KEY
     app.secret_key = secrets.token_hex(32)
 
 app.config.update(
@@ -77,37 +85,43 @@ if not USUARIO or not PASSWORD:
 
 
 # ======================================
-# CONEXIÓN AUTOMÁTICA (LOCAL / RAILWAY)
+# CONEXIÓN AUTOMÁTICA (LOCAL / RAILWAY / RENDER)
 # ======================================
 
 def obtener_conexion():
 
     database_url = os.getenv("DATABASE_URL")
 
-    if database_url:
+    try:
 
-        conn = psycopg2.connect(
-            database_url,
-            connect_timeout=10,
-            sslmode="require",
-            application_name="saas_sistema"
-        )
+        if database_url:
 
-        conn.autocommit = True
-        return conn
+            conn = psycopg2.connect(
+                database_url,
+                connect_timeout=10,
+                sslmode="require",
+                application_name="saas_sistema"
+            )
 
-    else:
+            conn.autocommit = True
+            return conn
 
-        conn = sqlite3.connect(
-            "database.db",
-            timeout=10,
-            check_same_thread=False
-        )
+        else:
 
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
+            conn = sqlite3.connect(
+                "database.db",
+                timeout=10,
+                check_same_thread=False
+            )
 
-        return conn
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+
+            return conn
+
+    except Exception as e:
+        print("Error conectando a la base de datos:", e)
+        raise
 
 
 print("DATABASE_URL RAW:")
@@ -118,7 +132,8 @@ print(repr(os.getenv("DATABASE_URL")))
 # DETECTAR TIPO DE BASE DE DATOS
 # ======================================
 def es_postgres():
-    return os.getenv("DATABASE_URL") is not None
+    database_url = os.getenv("DATABASE_URL")
+    return bool(database_url)
 
 
 # ======================================
@@ -138,59 +153,68 @@ def crear_tabla():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    # ======================================
-    # CREAR TABLA PRINCIPAL
-    # ======================================
-    cursor.execute(adaptar_query("""
-        CREATE TABLE IF NOT EXISTS ventas (
-            codigo_venta VARCHAR(50) PRIMARY KEY,
-            fecha DATE,
-            duracion_meses INTEGER,
-            fecha_vencimiento DATE,
-            cliente VARCHAR(100),
-            telefono VARCHAR(50),
-            servicio VARCHAR(100),
-            precio NUMERIC,
-            correo_cuenta VARCHAR(100),
-            estado VARCHAR(50)
-        );
-    """))
+    try:
 
-    # ======================================
-    # COLUMNAS DE NOTIFICACIÓN (MIGRACIÓN)
-    # ======================================
-    columnas_notificacion = [
-        "notificado_3",
-        "notificado_2",
-        "notificado_1",
-        "notificado_vencido"
-    ]
+        # ======================================
+        # CREAR TABLA PRINCIPAL
+        # ======================================
+        cursor.execute(adaptar_query("""
+            CREATE TABLE IF NOT EXISTS ventas (
+                codigo_venta VARCHAR(50) PRIMARY KEY,
+                fecha DATE,
+                duracion_meses INTEGER,
+                fecha_vencimiento DATE,
+                cliente VARCHAR(100),
+                telefono VARCHAR(50),
+                servicio VARCHAR(100),
+                precio NUMERIC,
+                correo_cuenta VARCHAR(100),
+                estado VARCHAR(50)
+            );
+        """))
 
-    for columna in columnas_notificacion:
+        # ======================================
+        # COLUMNAS DE NOTIFICACIÓN (MIGRACIÓN)
+        # ======================================
+        columnas_notificacion = [
+            "notificado_3",
+            "notificado_2",
+            "notificado_1",
+            "notificado_vencido"
+        ]
 
-        try:
+        for columna in columnas_notificacion:
 
-            if es_postgres():
+            try:
 
-                cursor.execute(f"""
-                    ALTER TABLE ventas
-                    ADD COLUMN IF NOT EXISTS {columna} BOOLEAN DEFAULT FALSE
-                """)
+                if es_postgres():
 
-            else:
+                    cursor.execute(f"""
+                        ALTER TABLE ventas
+                        ADD COLUMN IF NOT EXISTS {columna} BOOLEAN DEFAULT FALSE
+                    """)
 
-                # SQLite no tiene IF NOT EXISTS en columnas
-                cursor.execute(adaptar_query(f"""
-                    ALTER TABLE ventas
-                    ADD COLUMN {columna} BOOLEAN DEFAULT FALSE
-                """))
+                else:
 
-        except Exception:
-            # Si ya existe la columna simplemente continuamos
-            pass
+                    # SQLite no soporta IF NOT EXISTS en columnas
+                    cursor.execute(adaptar_query(f"""
+                        ALTER TABLE ventas
+                        ADD COLUMN {columna} BOOLEAN DEFAULT FALSE
+                    """))
 
-    conexion.commit()
-    conexion.close()
+            except Exception:
+                # Si ya existe la columna continuamos
+                pass
+
+        conexion.commit()
+
+    except Exception as e:
+        conexion.rollback()
+        print("Error creando tabla ventas:", e)
+        raise
+
+    finally:
+        conexion.close()
 
 
 
@@ -202,58 +226,67 @@ def crear_tablas_contables():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    # ======================================
-    # TABLA SERVICIOS
-    # ======================================
-    cursor.execute(adaptar_query("""
-        CREATE TABLE IF NOT EXISTS servicios (
-            id_servicio VARCHAR(20) PRIMARY KEY,
-            nombre_servicio VARCHAR(100) NOT NULL,
-            precio_base NUMERIC NOT NULL,
-            costo_base NUMERIC NOT NULL,
-            duracion_meses INTEGER NOT NULL
-        );
-    """))
+    try:
 
-    # ======================================
-    # TABLA VENTAS CONTABLES
-    # ======================================
-    cursor.execute(adaptar_query("""
-        CREATE TABLE IF NOT EXISTS ventas_contables (
-            id_contable VARCHAR(50) PRIMARY KEY,
-            codigo_venta VARCHAR(50) NOT NULL,
-            fecha DATE NOT NULL,
-            id_servicio VARCHAR(20) NOT NULL,
-            precio_venta NUMERIC NOT NULL,
-            costo_base NUMERIC NOT NULL,
-            utilidad NUMERIC NOT NULL,
-            FOREIGN KEY (codigo_venta)
-                REFERENCES ventas(codigo_venta)
-                ON DELETE CASCADE,
-            FOREIGN KEY (id_servicio)
-                REFERENCES servicios(id_servicio)
-        );
-    """))
+        # ======================================
+        # TABLA SERVICIOS
+        # ======================================
+        cursor.execute(adaptar_query("""
+            CREATE TABLE IF NOT EXISTS servicios (
+                id_servicio VARCHAR(20) PRIMARY KEY,
+                nombre_servicio VARCHAR(100) NOT NULL,
+                precio_base NUMERIC NOT NULL,
+                costo_base NUMERIC NOT NULL,
+                duracion_meses INTEGER NOT NULL
+            );
+        """))
 
-    # ======================================
-    # TABLA PAGOS TERCEROS (1:N REAL)
-    # ======================================
-    cursor.execute(adaptar_query("""
-        CREATE TABLE IF NOT EXISTS pagos_terceros (
-            id_pago VARCHAR(50) PRIMARY KEY,
-            id_contable VARCHAR(50) NOT NULL,
-            fecha_pago DATE NOT NULL,
-            monto_usdt NUMERIC NOT NULL,
-            nombre_tercero VARCHAR(100),
-            comprobante_binance TEXT,
-            FOREIGN KEY (id_contable)
-                REFERENCES ventas_contables(id_contable)
-                ON DELETE CASCADE
-        );
-    """))
+        # ======================================
+        # TABLA VENTAS CONTABLES
+        # ======================================
+        cursor.execute(adaptar_query("""
+            CREATE TABLE IF NOT EXISTS ventas_contables (
+                id_contable VARCHAR(50) PRIMARY KEY,
+                codigo_venta VARCHAR(50) NOT NULL,
+                fecha DATE NOT NULL,
+                id_servicio VARCHAR(20) NOT NULL,
+                precio_venta NUMERIC NOT NULL,
+                costo_base NUMERIC NOT NULL,
+                utilidad NUMERIC NOT NULL,
+                FOREIGN KEY (codigo_venta)
+                    REFERENCES ventas(codigo_venta)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (id_servicio)
+                    REFERENCES servicios(id_servicio)
+            );
+        """))
 
-    conexion.commit()
-    conexion.close()
+        # ======================================
+        # TABLA PAGOS TERCEROS (1:N REAL)
+        # ======================================
+        cursor.execute(adaptar_query("""
+            CREATE TABLE IF NOT EXISTS pagos_terceros (
+                id_pago VARCHAR(50) PRIMARY KEY,
+                id_contable VARCHAR(50) NOT NULL,
+                fecha_pago DATE NOT NULL,
+                monto_usdt NUMERIC NOT NULL,
+                nombre_tercero VARCHAR(100),
+                comprobante_binance TEXT,
+                FOREIGN KEY (id_contable)
+                    REFERENCES ventas_contables(id_contable)
+                    ON DELETE CASCADE
+            );
+        """))
+
+        conexion.commit()
+
+    except Exception as e:
+        conexion.rollback()
+        print("Error creando tablas contables:", e)
+        raise
+
+    finally:
+        conexion.close()
 
 
 # ======================================
@@ -264,40 +297,49 @@ def insertar_servicios_base():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    # Verificar si ya existen servicios
-    cursor.execute("SELECT COUNT(*) FROM servicios")
-    cantidad = cursor.fetchone()[0]
+    try:
 
-    if cantidad > 0:
+        # Verificar si ya existen servicios
+        cursor.execute("SELECT COUNT(*) FROM servicios")
+        cantidad = cursor.fetchone()[0]
+
+        if cantidad > 0:
+            return  # Ya hay servicios, no hacemos nada
+
+        servicios_base = [
+            ("SERV-001", "Adobe 1 año", 97, 50, 12),
+            ("SERV-002", "Adobe 6 meses", 52, 30, 6),
+            ("SERV-004", "Adobe 1 mes", 10, 5, 1),
+            ("SERV-005", "Office 12 meses", 25, 6, 12),
+            ("SERV-006", "Capcut 1 año", 65, 40, 12),
+            ("SERV-007", "Capcut 1 mes", 7, 3, 1),
+            ("SERV-008", "Canva 1 año", 30, 1, 12),
+            ("SERV-009", "Autodesk 1 año", 35, 15, 12),
+        ]
+
+        for s in servicios_base:
+
+            if es_postgres():
+                cursor.execute("""
+                    INSERT INTO servicios
+                    (id_servicio, nombre_servicio, precio_base, costo_base, duracion_meses)
+                    VALUES (%s,%s,%s,%s,%s)
+                """, s)
+            else:
+                cursor.execute("""
+                    INSERT INTO servicios
+                    VALUES (?,?,?,?,?)
+                """, s)
+
+        conexion.commit()
+
+    except Exception as e:
+        conexion.rollback()
+        print("Error insertando servicios base:", e)
+        raise
+
+    finally:
         conexion.close()
-        return  # Ya hay servicios, no hacemos nada
-
-    servicios_base = [
-        ("SERV-001", "Adobe 1 año", 97, 50, 12),
-        ("SERV-002", "Adobe 6 meses", 52, 30, 6),
-        ("SERV-004", "Adobe 1 mes", 10, 5, 1),
-        ("SERV-005", "Office 12 meses", 25, 6, 12),
-        ("SERV-006", "Capcut 1 año", 65, 40, 12),
-        ("SERV-007", "Capcut 1 mes", 7, 3, 1),
-        ("SERV-008", "Canva 1 año", 30, 1, 12),
-        ("SERV-009", "Autodesk 1 año", 35, 15, 12),
-    ]
-
-    for s in servicios_base:
-        if es_postgres():
-            cursor.execute("""
-                INSERT INTO servicios
-                (id_servicio, nombre_servicio, precio_base, costo_base, duracion_meses)
-                VALUES (%s,%s,%s,%s,%s)
-            """, s)
-        else:
-            cursor.execute("""
-                INSERT INTO servicios
-                VALUES (?,?,?,?,?)
-            """, s)
-
-    conexion.commit()
-    conexion.close()
 
 
 # ======================================
@@ -308,21 +350,11 @@ def generar_codigo():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    año_actual = datetime.now().year
-    patron = f"VEN-{año_actual}-%"
+    try:
 
-    if es_postgres():
-        cursor.execute(
-            adaptar_query("""
-                SELECT codigo_venta
-                FROM ventas
-                WHERE codigo_venta LIKE ?
-                ORDER BY codigo_venta DESC
-                LIMIT 1
-            """),
-            (patron,)
-        )
-    else:
+        año_actual = datetime.now().year
+        patron = f"VEN-{año_actual}-%"
+
         cursor.execute(
             adaptar_query("""
                 SELECT codigo_venta
@@ -334,11 +366,20 @@ def generar_codigo():
             (patron,)
         )
 
-    ultimo = cursor.fetchone()
-    conexion.close()
+        ultimo = cursor.fetchone()
+
+    except Exception as e:
+        print("Error generando código de venta:", e)
+        ultimo = None
+
+    finally:
+        conexion.close()
 
     if ultimo:
-        numero = int(ultimo[0].split("-")[-1]) + 1
+        try:
+            numero = int(ultimo[0].split("-")[-2]) + 1
+        except Exception:
+            numero = 1
     else:
         numero = 1
 
@@ -368,8 +409,8 @@ def enviar_telegram(mensaje):
     def _enviar():
         try:
             http.post(url, data=payload, timeout=10)
-        except Exception:
-            pass
+        except Exception as e:
+            print("Error enviando mensaje a Telegram:", e)
 
     threading.Thread(
         target=_enviar,
@@ -394,12 +435,16 @@ def calcular_storage():
 
     global _storage_cache
 
+    # Cache 5 minutos
     if time.time() - _storage_cache["timestamp"] < 300:
         return _storage_cache["usado"], _storage_cache["disponible"]
 
     total_bytes = 0
 
     try:
+
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            return _storage_cache["usado"], _storage_cache["disponible"]
 
         headers = {
             "apikey": SUPABASE_KEY,
@@ -420,20 +465,28 @@ def calcular_storage():
 
         try:
             archivos = response.json()
-        except Exception:
+        except Exception as e:
+            print("Error leyendo respuesta de Supabase Storage:", e)
             return _storage_cache["usado"], _storage_cache["disponible"]
 
         if isinstance(archivos, list):
 
             for archivo in archivos:
-                if "metadata" in archivo and "size" in archivo["metadata"]:
-                    total_bytes += int(archivo["metadata"]["size"])
 
-    except Exception:
+                metadata = archivo.get("metadata")
+
+                if metadata and "size" in metadata:
+                    try:
+                        total_bytes += int(metadata["size"])
+                    except Exception:
+                        pass
+
+    except Exception as e:
+        print("Error calculando storage:", e)
         return _storage_cache["usado"], _storage_cache["disponible"]
 
     usado_mb = round(total_bytes / (1024 * 1024), 2)
-    disponible_mb = round(50 - usado_mb, 2)
+    disponible_mb = round(max(0, 50 - usado_mb), 2)
 
     _storage_cache["usado"] = usado_mb
     _storage_cache["disponible"] = disponible_mb
@@ -452,46 +505,48 @@ def revisar_vencimientos():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    hoy = (datetime.utcnow() - timedelta(hours=5)).date()
-    limite = hoy + timedelta(days=ALERTA_DIAS)
+    try:
 
-    cursor.execute(adaptar_query("""
-        SELECT codigo_venta, cliente, servicio,
-               duracion_meses, telefono,
-               fecha_vencimiento,
-               COALESCE(notificado_3, FALSE),
-               COALESCE(notificado_2, FALSE),
-               COALESCE(notificado_1, FALSE),
-               COALESCE(notificado_vencido, FALSE)
-        FROM ventas
-        WHERE fecha_vencimiento <= ?
-    """), (limite,))
+        hoy = (datetime.utcnow() - timedelta(hours=5)).date()
+        limite = hoy + timedelta(days=ALERTA_DIAS)
 
-    registros = cursor.fetchall()
+        cursor.execute(adaptar_query("""
+            SELECT codigo_venta, cliente, servicio,
+                   duracion_meses, telefono,
+                   fecha_vencimiento,
+                   COALESCE(notificado_3, FALSE),
+                   COALESCE(notificado_2, FALSE),
+                   COALESCE(notificado_1, FALSE),
+                   COALESCE(notificado_vencido, FALSE)
+            FROM ventas
+            WHERE fecha_vencimiento <= ?
+        """), (limite,))
 
-    for r in registros:
+        registros = cursor.fetchall()
 
-        codigo = r[0]
-        cliente = r[1]
-        servicio = r[2]
-        duracion = r[3]
-        telefono = r[4]
-        fecha_v = r[5]
+        for r in registros:
 
-        notif_3 = bool(r[6])
-        notif_2 = bool(r[7])
-        notif_1 = bool(r[8])
-        notif_v = bool(r[9])
+            codigo = r[0]
+            cliente = r[1]
+            servicio = r[2]
+            duracion = r[3]
+            telefono = r[4]
+            fecha_v = r[5]
 
-        if not fecha_v:
-            continue
+            notif_3 = bool(r[6])
+            notif_2 = bool(r[7])
+            notif_1 = bool(r[8])
+            notif_v = bool(r[9])
 
-        if isinstance(fecha_v, str):
-            fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
+            if not fecha_v:
+                continue
 
-        dias_restantes = (fecha_v - hoy).days
+            if isinstance(fecha_v, str):
+                fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
 
-        mensaje = f"""
+            dias_restantes = (fecha_v - hoy).days
+
+            mensaje = f"""
 Cliente: {cliente}
 Servicio: {servicio}
 Duración: {duracion} mes(es)
@@ -499,32 +554,39 @@ Teléfono: {telefono}
 Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
 """
 
-        if dias_restantes == 3 and not notif_3:
-            enviar_telegram("⚠ Faltan 3 días\n" + mensaje)
-            cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_3=? WHERE codigo_venta=?
-            """), (True, codigo))
+            if dias_restantes == 3 and not notif_3:
+                enviar_telegram("⚠ Faltan 3 días\n" + mensaje)
+                cursor.execute(adaptar_query("""
+                    UPDATE ventas SET notificado_3=? WHERE codigo_venta=?
+                """), (True, codigo))
 
-        elif dias_restantes == 2 and not notif_2:
-            enviar_telegram("⚠ Faltan 2 días\n" + mensaje)
-            cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_2=? WHERE codigo_venta=?
-            """), (True, codigo))
+            elif dias_restantes == 2 and not notif_2:
+                enviar_telegram("⚠ Faltan 2 días\n" + mensaje)
+                cursor.execute(adaptar_query("""
+                    UPDATE ventas SET notificado_2=? WHERE codigo_venta=?
+                """), (True, codigo))
 
-        elif dias_restantes == 1 and not notif_1:
-            enviar_telegram("⚠ Vence mañana\n" + mensaje)
-            cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_1=? WHERE codigo_venta=?
-            """), (True, codigo))
+            elif dias_restantes == 1 and not notif_1:
+                enviar_telegram("⚠ Vence mañana\n" + mensaje)
+                cursor.execute(adaptar_query("""
+                    UPDATE ventas SET notificado_1=? WHERE codigo_venta=?
+                """), (True, codigo))
 
-        elif dias_restantes < 0 and not notif_v:
-            enviar_telegram("❌ VENCIDO\n" + mensaje)
-            cursor.execute(adaptar_query("""
-                UPDATE ventas SET notificado_vencido=? WHERE codigo_venta=?
-            """), (True, codigo))
+            elif dias_restantes < 0 and not notif_v:
+                enviar_telegram("❌ VENCIDO\n" + mensaje)
+                cursor.execute(adaptar_query("""
+                    UPDATE ventas SET notificado_vencido=? WHERE codigo_venta=?
+                """), (True, codigo))
 
-    conexion.commit()
-    conexion.close()
+        conexion.commit()
+
+    except Exception as e:
+        conexion.rollback()
+        print("Error revisando vencimientos:", e)
+        raise
+
+    finally:
+        conexion.close()
 
 
 # ======================================
@@ -535,32 +597,47 @@ def actualizar_estados():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    hoy = datetime.today().date()
+    try:
 
-    cursor.execute("SELECT codigo_venta, fecha_vencimiento, estado FROM ventas")
-    registros = cursor.fetchall()
+        hoy = datetime.today().date()
 
-    for r in registros:
+        cursor.execute("SELECT codigo_venta, fecha_vencimiento, estado FROM ventas")
+        registros = cursor.fetchall()
 
-        codigo = r[0]
-        fecha_v = r[1]
-        estado_actual = r[2]
+        for r in registros:
 
-        # Aseguramos que fecha sea tipo date
-        if isinstance(fecha_v, str):
-            fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
+            codigo = r[0]
+            fecha_v = r[1]
+            estado_actual = r[2]
 
-        nuevo_estado = "vencido" if hoy > fecha_v else "activo"
+            if not fecha_v:
+                continue
 
-        if nuevo_estado != estado_actual:
-            cursor.execute(adaptar_query("""
-                UPDATE ventas
-                SET estado=?
-                WHERE codigo_venta=?
-            """), (nuevo_estado, codigo))
+            # Aseguramos que fecha sea tipo date
+            if isinstance(fecha_v, str):
+                try:
+                    fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
+                except Exception:
+                    continue
 
-    conexion.commit()
-    conexion.close()
+            nuevo_estado = "vencido" if hoy > fecha_v else "activo"
+
+            if nuevo_estado != estado_actual:
+                cursor.execute(adaptar_query("""
+                    UPDATE ventas
+                    SET estado=?
+                    WHERE codigo_venta=?
+                """), (nuevo_estado, codigo))
+
+        conexion.commit()
+
+    except Exception as e:
+        conexion.rollback()
+        print("Error actualizando estados:", e)
+        raise
+
+    finally:
+        conexion.close()
 
 
 # ======================================
@@ -569,18 +646,24 @@ def actualizar_estados():
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
-    if request.method == "POST":
+    try:
 
-        usuario = request.form.get("usuario", "").strip()
-        password = request.form.get("password", "").strip()
+        if request.method == "POST":
 
-        if usuario == USUARIO and password == PASSWORD:
-            session["usuario"] = usuario
-            return redirect("/")
+            usuario = request.form.get("usuario", "").strip()
+            password = request.form.get("password", "").strip()
 
-        return render_template("login.html", error="Credenciales incorrectas")
+            if usuario == USUARIO and password == PASSWORD:
+                session["usuario"] = usuario
+                return redirect("/")
 
-    return render_template("login.html")
+            return render_template("login.html", error="Credenciales incorrectas")
+
+        return render_template("login.html")
+
+    except Exception as e:
+        print("Error en login:", e)
+        return render_template("login.html", error="Error interno del sistema")
 
 
 # ======================================
@@ -588,7 +671,12 @@ def login():
 # ======================================
 @app.route("/logout")
 def logout():
-    session.clear()
+
+    try:
+        session.clear()
+    except Exception as e:
+        print("Error en logout:", e)
+
     return redirect("/login")
 
 
@@ -615,8 +703,14 @@ def debug_telegram():
             },
             timeout=10
         )
+
+        if response.status_code != 200:
+            print("Error Telegram:", response.text)
+
         return response.text
+
     except Exception as e:
+        print("Error enviando mensaje Telegram:", e)
         return f"Error enviando mensaje: {e}"
 
 
@@ -634,7 +728,9 @@ def cron():
     try:
         revisar_vencimientos()
         return "Cron ejecutado correctamente"
+
     except Exception as e:
+        print("Error ejecutando cron:", e)
         return f"Error en cron: {e}"
 
 
@@ -647,114 +743,123 @@ def index():
     if "usuario" not in session:
         return redirect("/login")
 
-    actualizar_estados()
+    try:
 
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
+        actualizar_estados()
 
-    # ================================
-    # CLIENTES
-    # ================================
-    cursor.execute("""
-        SELECT 
-            codigo_venta,
-            fecha,
-            duracion_meses,
-            fecha_vencimiento,
-            cliente,
-            telefono,
-            servicio,
-            precio,
-            correo_cuenta,
-            estado
-        FROM ventas
-        ORDER BY fecha_vencimiento ASC
-    """)
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
 
-    datos = cursor.fetchall()
+        # ================================
+        # CLIENTES
+        # ================================
+        cursor.execute("""
+            SELECT 
+                codigo_venta,
+                fecha,
+                duracion_meses,
+                fecha_vencimiento,
+                cliente,
+                telefono,
+                servicio,
+                precio,
+                correo_cuenta,
+                estado
+            FROM ventas
+            ORDER BY fecha_vencimiento ASC
+        """)
 
-    hoy = datetime.today().date()
+        datos = cursor.fetchall()
 
-    activos = 0
-    vencidos = 0
-    por_vencer = 0
+        hoy = datetime.today().date()
 
-    datos_con_alerta = []
+        activos = 0
+        vencidos = 0
+        por_vencer = 0
 
-    for d in datos:
+        datos_con_alerta = []
 
-        fecha_v_raw = d[3]
+        for d in datos:
 
-        if not fecha_v_raw:
-            continue
+            fecha_v_raw = d[3]
 
-        if isinstance(fecha_v_raw, str):
-            fecha_v = datetime.strptime(fecha_v_raw[:10], "%Y-%m-%d").date()
-        else:
-            fecha_v = fecha_v_raw
+            if not fecha_v_raw:
+                continue
 
-        dias_restantes = (fecha_v - hoy).days
+            if isinstance(fecha_v_raw, str):
+                try:
+                    fecha_v = datetime.strptime(fecha_v_raw[:10], "%Y-%m-%d").date()
+                except Exception:
+                    continue
+            else:
+                fecha_v = fecha_v_raw
 
-        if d[9] == "vencido":
-            alerta = "vencido"
-            vencidos += 1
+            dias_restantes = (fecha_v - hoy).days
 
-        elif 0 <= dias_restantes <= ALERTA_DIAS:
-            alerta = "por_vencer"
-            por_vencer += 1
+            if d[9] == "vencido":
+                alerta = "vencido"
+                vencidos += 1
 
-        else:
-            alerta = "activo"
-            activos += 1
+            elif 0 <= dias_restantes <= ALERTA_DIAS:
+                alerta = "por_vencer"
+                por_vencer += 1
 
-        datos_con_alerta.append((d, alerta))
+            else:
+                alerta = "activo"
+                activos += 1
 
-    # ================================
-    # STORAGE SUPABASE
-    # ================================
-    usado_mb, disponible_mb = calcular_storage()
+            datos_con_alerta.append((d, alerta))
 
-    # ================================
-    # MÉTRICAS FINANCIERAS
-    # ================================
-    cursor.execute(adaptar_query("""
-        SELECT 
-            COALESCE(SUM(precio_venta),0),
-            COALESCE(SUM(costo_base),0),
-            COALESCE(SUM(utilidad),0)
-        FROM ventas_contables
-    """))
+        # ================================
+        # STORAGE SUPABASE
+        # ================================
+        usado_mb, disponible_mb = calcular_storage()
 
-    finanzas = cursor.fetchone()
+        # ================================
+        # MÉTRICAS FINANCIERAS
+        # ================================
+        cursor.execute(adaptar_query("""
+            SELECT 
+                COALESCE(SUM(precio_venta),0),
+                COALESCE(SUM(costo_base),0),
+                COALESCE(SUM(utilidad),0)
+            FROM ventas_contables
+        """))
 
-    total_ingresos = float(finanzas[0] or 0)
-    total_costos = float(finanzas[1] or 0)
-    total_utilidad = float(finanzas[2] or 0)
+        finanzas = cursor.fetchone()
 
-    # ================================
-    # PAGOS A TERCEROS
-    # ================================
-    cursor.execute(adaptar_query("""
-        SELECT COALESCE(SUM(monto_usdt),0)
-        FROM pagos_terceros
-    """))
+        total_ingresos = float(finanzas[0] or 0)
+        total_costos = float(finanzas[1] or 0)
+        total_utilidad = float(finanzas[2] or 0)
 
-    total_pagos = float(cursor.fetchone()[0] or 0)
+        # ================================
+        # PAGOS A TERCEROS
+        # ================================
+        cursor.execute(adaptar_query("""
+            SELECT COALESCE(SUM(monto_usdt),0)
+            FROM pagos_terceros
+        """))
 
-    conexion.close()
+        total_pagos = float(cursor.fetchone()[0] or 0)
 
-    return render_template(
-        "dashboard/index.html",
-        datos=datos_con_alerta,
-        total_activos=activos,
-        total_vencidos=vencidos,
-        total_por_vencer=por_vencer,
-        usado_storage=usado_mb,
-        disponible_storage=disponible_mb,
-        total_ingresos=round(total_ingresos,2),
-        total_pagos=round(total_pagos,2),
-        total_utilidad=round(total_utilidad,2)
-    )
+        conexion.close()
+
+        return render_template(
+            "dashboard/index.html",
+            datos=datos_con_alerta,
+            total_activos=activos,
+            total_vencidos=vencidos,
+            total_por_vencer=por_vencer,
+            usado_storage=usado_mb,
+            disponible_storage=disponible_mb,
+            total_ingresos=round(total_ingresos, 2),
+            total_pagos=round(total_pagos, 2),
+            total_utilidad=round(total_utilidad, 2)
+        )
+
+    except Exception as e:
+        print("Error en dashboard:", e)
+        return "Error cargando el dashboard", 500
 
 
 
@@ -930,8 +1035,13 @@ def agregar():
             return redirect("/ventas_contables")
 
         except Exception as e:
-            conexion.rollback()
+            try:
+                conexion.rollback()
+            except Exception:
+                pass
+
             conexion.close()
+            print("Error al agregar cliente:", e)
             return f"Error al agregar cliente: {e}"
 
     cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
@@ -1053,8 +1163,13 @@ def editar(codigo):
             return redirect("/")
 
         except Exception as e:
-            conexion.rollback()
+            try:
+                conexion.rollback()
+            except Exception:
+                pass
+
             conexion.close()
+            print("Error al editar cliente:", e)
             return f"Error al editar cliente: {e}"
 
     # ================================
@@ -1096,8 +1211,13 @@ def eliminar(codigo):
         conexion.commit()
 
     except Exception as e:
-        conexion.rollback()
+        try:
+            conexion.rollback()
+        except Exception:
+            pass
+
         conexion.close()
+        print("Error eliminando cliente:", e)
         return f"Error al eliminar: {e}"
 
     conexion.close()
@@ -1300,8 +1420,13 @@ def renovar(codigo):
         return redirect("/")
 
     except Exception as e:
-        conexion.rollback()
+        try:
+            conexion.rollback()
+        except Exception:
+            pass
+
         conexion.close()
+        print("Error en renovación:", e)
         return f"Error en renovación: {e}"
 
 
@@ -1317,25 +1442,33 @@ def contabilidad():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute(adaptar_query("""
-        SELECT 
-            vc.id_contable,
-            vc.codigo_venta,
-            v.cliente,
-            vc.fecha,
-            vc.precio_venta,
-            vc.costo_base,
-            vc.utilidad,
-            COALESCE(pt.monto_usdt, 0)
-        FROM ventas_contables vc
-        JOIN ventas v
-            ON vc.codigo_venta = v.codigo_venta
-        LEFT JOIN pagos_terceros pt 
-            ON vc.id_contable = pt.id_contable
-        ORDER BY vc.fecha DESC
-    """))
+    try:
 
-    datos = cursor.fetchall()
+        cursor.execute(adaptar_query("""
+            SELECT 
+                vc.id_contable,
+                vc.codigo_venta,
+                v.cliente,
+                vc.fecha,
+                vc.precio_venta,
+                vc.costo_base,
+                vc.utilidad,
+                COALESCE(pt.monto_usdt, 0)
+            FROM ventas_contables vc
+            JOIN ventas v
+                ON vc.codigo_venta = v.codigo_venta
+            LEFT JOIN pagos_terceros pt 
+                ON vc.id_contable = pt.id_contable
+            ORDER BY vc.fecha DESC
+        """))
+
+        datos = cursor.fetchall()
+
+    except Exception as e:
+        print("Error cargando contabilidad:", e)
+        conexion.close()
+        return "Error cargando contabilidad", 500
+
     conexion.close()
 
     # Totales seguros
@@ -1360,7 +1493,6 @@ def contabilidad():
         total_utilidad=round(total_utilidad, 2)
     )
 
-
 # ======================================
 # VER ARCHIVOS LOCALES (SOLO SQLITE)
 # ======================================
@@ -1370,13 +1502,19 @@ def ver_archivo_local(archivo):
     if "usuario" not in session:
         return redirect("/login")
 
-    # evitar path traversal
-    if ".." in archivo or archivo.startswith("/"):
-        return "Acceso inválido", 403
+    try:
 
-    ruta_base = os.path.abspath("uploads")
+        # evitar path traversal
+        if ".." in archivo or archivo.startswith("/"):
+            return "Acceso inválido", 403
 
-    return send_from_directory(ruta_base, archivo)
+        ruta_base = os.path.abspath("uploads")
+
+        return send_from_directory(ruta_base, archivo)
+
+    except Exception as e:
+        print("Error sirviendo archivo local:", e)
+        return "Error accediendo al archivo", 500
 
 
 # ======================================
@@ -1391,27 +1529,35 @@ def ventas_contables():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute(adaptar_query("""
-    SELECT 
-        vc.id_contable,
-        vc.codigo_venta,
-        v.cliente,
-        vc.fecha,
-        s.nombre_servicio,
-        vc.precio_venta,
-        vc.costo_base,
-        vc.utilidad,
-        vc.nota_venta,
-        vc.comprobante_banco
-    FROM ventas_contables vc
-    JOIN ventas v
-        ON vc.codigo_venta = v.codigo_venta
-    JOIN servicios s
-        ON vc.id_servicio = s.id_servicio
-    ORDER BY vc.fecha DESC
-    """))
+    try:
 
-    datos = cursor.fetchall()
+        cursor.execute(adaptar_query("""
+        SELECT 
+            vc.id_contable,
+            vc.codigo_venta,
+            v.cliente,
+            vc.fecha,
+            s.nombre_servicio,
+            vc.precio_venta,
+            vc.costo_base,
+            vc.utilidad,
+            vc.nota_venta,
+            vc.comprobante_banco
+        FROM ventas_contables vc
+        JOIN ventas v
+            ON vc.codigo_venta = v.codigo_venta
+        JOIN servicios s
+            ON vc.id_servicio = s.id_servicio
+        ORDER BY vc.fecha DESC
+        """))
+
+        datos = cursor.fetchall()
+
+    except Exception as e:
+        print("Error cargando ventas contables:", e)
+        conexion.close()
+        return "Error cargando ventas contables", 500
+
     conexion.close()
 
     return render_template("contabilidad/ventas_contables.html", datos=datos)
@@ -1514,8 +1660,8 @@ def subir_archivo(tipo, identificador):
                         timeout=10
                     )
 
-            except Exception:
-                pass
+            except Exception as e:
+                print("Error eliminando archivo anterior:", e)
 
         if USANDO_SUPABASE:
 
@@ -1559,9 +1705,10 @@ def subir_archivo(tipo, identificador):
         conexion.commit()
         conexion.close()
 
-        return redirect(request.referrer)
+        return redirect(request.referrer or "/")
 
     except Exception as e:
+        print("Error subiendo archivo:")
         print(traceback.format_exc())
         return f"Error subiendo archivo: {e}", 500
     
@@ -1602,7 +1749,8 @@ def optimizar_imagen(archivo):
 
             return buffer
 
-    except Exception:
+    except Exception as e:
+        print("Error optimizando imagen:", e)
         archivo.seek(0)
         return archivo
 
@@ -1619,21 +1767,29 @@ def pagos_terceros():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute(adaptar_query("""
-        SELECT 
-            pt.id_pago,
-            vc.codigo_venta,
-            pt.fecha_pago,
-            pt.monto_usdt,
-            pt.nombre_tercero,
-            pt.comprobante_binance
-        FROM pagos_terceros pt
-        JOIN ventas_contables vc
-            ON pt.id_contable = vc.id_contable
-        ORDER BY pt.fecha_pago DESC
-    """))
+    try:
 
-    datos = cursor.fetchall()
+        cursor.execute(adaptar_query("""
+            SELECT 
+                pt.id_pago,
+                vc.codigo_venta,
+                pt.fecha_pago,
+                pt.monto_usdt,
+                pt.nombre_tercero,
+                pt.comprobante_binance
+            FROM pagos_terceros pt
+            JOIN ventas_contables vc
+                ON pt.id_contable = vc.id_contable
+            ORDER BY pt.fecha_pago DESC
+        """))
+
+        datos = cursor.fetchall()
+
+    except Exception as e:
+        print("Error cargando pagos terceros:", e)
+        conexion.close()
+        return "Error cargando pagos terceros", 500
+
     conexion.close()
 
     return render_template("contabilidad/pagos_terceros.html", datos=datos)
@@ -1651,17 +1807,25 @@ def listar_servicios():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute(adaptar_query("""
-        SELECT id_servicio,
-               nombre_servicio,
-               precio_base,
-               costo_base,
-               duracion_meses
-        FROM servicios
-        ORDER BY nombre_servicio
-    """))
+    try:
 
-    servicios = cursor.fetchall()
+        cursor.execute(adaptar_query("""
+            SELECT id_servicio,
+                   nombre_servicio,
+                   precio_base,
+                   costo_base,
+                   duracion_meses
+            FROM servicios
+            ORDER BY nombre_servicio
+        """))
+
+        servicios = cursor.fetchall()
+
+    except Exception as e:
+        print("Error cargando servicios:", e)
+        conexion.close()
+        return "Error cargando servicios", 500
+
     conexion.close()
 
     return render_template("servicios/servicios.html", servicios=servicios)
@@ -1678,13 +1842,14 @@ def nuevo_servicio():
 
     if request.method == "POST":
 
-        id_servicio = request.form["id_servicio"].strip().upper()
-        nombre = request.form["nombre"].strip()
-        precio = float(request.form["precio"])
-        costo = float(request.form["costo"])
-        duracion = int(request.form["duracion"])
-
         try:
+
+            id_servicio = request.form["id_servicio"].strip().upper()
+            nombre = request.form["nombre"].strip()
+            precio = float(request.form["precio"])
+            costo = float(request.form["costo"])
+            duracion = int(request.form["duracion"])
+
             conexion = obtener_conexion()
             cursor = conexion.cursor()
 
@@ -1706,6 +1871,12 @@ def nuevo_servicio():
             return redirect("/servicios")
 
         except Exception as e:
+            try:
+                conexion.rollback()
+            except Exception:
+                pass
+
+            print("Error creando servicio:", e)
             return f"Error creando servicio: {e}"
 
     return render_template("servicios/servicio_form.html", modo="nuevo")
@@ -1725,30 +1896,42 @@ def editar_servicio(id_servicio):
 
     if request.method == "POST":
 
-        nombre = request.form["nombre"].strip()
-        precio = float(request.form["precio"])
-        costo = float(request.form["costo"])
-        duracion = int(request.form["duracion"])
+        try:
 
-        cursor.execute(adaptar_query("""
-            UPDATE servicios
-            SET nombre_servicio=?,
-                precio_base=?,
-                costo_base=?,
-                duracion_meses=?
-            WHERE id_servicio=?
-        """), (
-            nombre,
-            precio,
-            costo,
-            duracion,
-            id_servicio
-        ))
+            nombre = request.form["nombre"].strip()
+            precio = float(request.form["precio"])
+            costo = float(request.form["costo"])
+            duracion = int(request.form["duracion"])
 
-        conexion.commit()
-        conexion.close()
+            cursor.execute(adaptar_query("""
+                UPDATE servicios
+                SET nombre_servicio=?,
+                    precio_base=?,
+                    costo_base=?,
+                    duracion_meses=?
+                WHERE id_servicio=?
+            """), (
+                nombre,
+                precio,
+                costo,
+                duracion,
+                id_servicio
+            ))
 
-        return redirect("/servicios")
+            conexion.commit()
+            conexion.close()
+
+            return redirect("/servicios")
+
+        except Exception as e:
+            try:
+                conexion.rollback()
+            except Exception:
+                pass
+
+            conexion.close()
+            print("Error editando servicio:", e)
+            return f"Error editando servicio: {e}"
 
     cursor.execute(adaptar_query("""
         SELECT id_servicio,
@@ -1778,37 +1961,56 @@ def eliminar_servicio(id_servicio):
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    # Verificar si está en uso
-    cursor.execute(adaptar_query("""
-        SELECT COUNT(*)
-        FROM ventas_contables
-        WHERE id_servicio=?
-    """), (id_servicio,))
+    try:
 
-    uso = cursor.fetchone()[0]
+        # Verificar si está en uso
+        cursor.execute(adaptar_query("""
+            SELECT COUNT(*)
+            FROM ventas_contables
+            WHERE id_servicio=?
+        """), (id_servicio,))
 
-    if uso > 0:
+        uso = cursor.fetchone()[0]
+
+        if uso > 0:
+            conexion.close()
+            return "No se puede eliminar. El servicio tiene ventas registradas."
+
+        cursor.execute(adaptar_query("""
+            DELETE FROM servicios
+            WHERE id_servicio=?
+        """), (id_servicio,))
+
+        conexion.commit()
         conexion.close()
-        return "No se puede eliminar. El servicio tiene ventas registradas."
 
-    cursor.execute(adaptar_query("""
-        DELETE FROM servicios
-        WHERE id_servicio=?
-    """), (id_servicio,))
+        return redirect("/servicios")
 
-    conexion.commit()
-    conexion.close()
+    except Exception as e:
+        try:
+            conexion.rollback()
+        except Exception:
+            pass
 
-    return redirect("/servicios")
+        conexion.close()
+        print("Error eliminando servicio:", e)
+        return f"Error eliminando servicio: {e}"
 
 
 # ======================================
 # INICIALIZACIÓN DE BASE
 # ======================================
 def inicializar_base():
-    crear_tabla()
-    crear_tablas_contables()
-    insertar_servicios_base()
+
+    try:
+        crear_tabla()
+        crear_tablas_contables()
+        insertar_servicios_base()
+
+    except Exception as e:
+        print("Error inicializando base de datos:", e)
+        raise
+
 
 # Ejecutar siempre al iniciar (local o nube)
 inicializar_base()
@@ -1818,5 +2020,11 @@ inicializar_base()
 # EJECUCIÓN APP
 # ======================================
 if __name__ == "__main__":
-    # Debug solo en entorno local
-    app.run(debug=not es_postgres())
+
+    try:
+        # Debug solo en entorno local
+        app.run(debug=not es_postgres())
+
+    except Exception as e:
+        print("Error iniciando aplicación:", e)
+        raise

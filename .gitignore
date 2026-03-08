@@ -2,15 +2,19 @@
 __pycache__/
 *.pyc
 
-# Base de datos
+# Base de datos local
 *.db
 *.db-journal
 
 # VSCode
 .vscode/
 
-# uploads
-uploads/
+# uploads (ignorar contenido pero mantener carpeta)
+uploads/*
+!uploads/.keep
 
 # Mac
 .DS_Store
+
+# Excel local
+*.xlsx
