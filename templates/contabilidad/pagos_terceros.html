@@ -7,13 +7,13 @@
 
 <div class="card table-card">
 
-<div class="card-header d-flex justify-content-between align-items-center">
+<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
 
 <div class="table-title">
 Pagos a Proveedores
 </div>
 
-<div class="table-sub">
+<div class="table-sub text-muted small">
 Registro de pagos realizados a terceros
 </div>
 
@@ -42,24 +42,32 @@ Registro de pagos realizados a terceros
 
 <tr>
 
-<td class="fw-semibold">{{ d[0] }}</td>
+<td class="fw-semibold">
+{{ d[0] }}
+</td>
 
-<td>{{ d[1] }}</td>
+<td>
+{{ d[1] }}
+</td>
 
-<td>{{ d[2] }}</td>
+<td>
+{{ d[2] }}
+</td>
 
 <td class="text-end text-primary fw-semibold">
 {{ d[3] }} USDT
 </td>
 
-<td>{{ d[4] }}</td>
+<td>
+{{ d[4] }}
+</td>
 
 <td>
 
 <form action="/subir_archivo/pago_binance/{{ d[0] }}"
 method="POST"
 enctype="multipart/form-data"
-class="d-flex align-items-center gap-2">
+class="d-flex flex-wrap align-items-center gap-2">
 
 <input
 type="file"
@@ -75,14 +83,20 @@ onchange="this.form.submit()"
 <a href="{{ d[5] }}"
 target="_blank"
 class="btn btn-outline-secondary btn-sm">
+
+<i class="bi bi-eye"></i>
 Ver
+
 </a>
 
 <button
 type="button"
 class="btn btn-outline-primary btn-sm"
 onclick="document.getElementById('pago_{{ d[0] }}').click()">
+
+<i class="bi bi-upload"></i>
 Reemplazar
+
 </button>
 
 {% else %}
@@ -91,7 +105,10 @@ Reemplazar
 type="button"
 class="btn btn-success btn-sm"
 onclick="document.getElementById('pago_{{ d[0] }}').click()">
+
+<i class="bi bi-upload"></i>
 Subir
+
 </button>
 
 {% endif %}

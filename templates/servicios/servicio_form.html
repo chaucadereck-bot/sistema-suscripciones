@@ -21,6 +21,9 @@ Editar Servicio
 <div class="card form-card">
 
 <div class="card-header">
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+
 <div class="form-title">
 
 {% if modo == "nuevo" %}
@@ -30,6 +33,13 @@ Editar Servicio
 {% endif %}
 
 </div>
+
+<div class="text-muted small">
+Configuración del servicio
+</div>
+
+</div>
+
 </div>
 
 <div class="card-body">
@@ -38,28 +48,39 @@ Editar Servicio
 
 <div class="row g-4">
 
-<div class="col-md-3">
-<label class="form-label">ID Servicio</label>
+<div class="col-xl-3 col-md-4">
+
+<label class="form-label">
+ID Servicio
+</label>
 
 {% if modo == "nuevo" %}
+
 <input
 type="text"
 name="id_servicio"
 class="form-control"
 placeholder="Ej: SERV-010"
 required>
+
 {% else %}
+
 <input
 type="text"
 class="form-control"
 value="{{ servicio[0] }}"
 readonly>
+
 {% endif %}
 
 </div>
 
-<div class="col-md-9">
-<label class="form-label">Nombre del Servicio</label>
+<div class="col-xl-9 col-md-8">
+
+<label class="form-label">
+Nombre del Servicio
+</label>
+
 <input
 type="text"
 name="nombre"
@@ -67,10 +88,15 @@ class="form-control"
 placeholder="Ej: Adobe 12 meses"
 value="{% if servicio %}{{ servicio[1] }}{% endif %}"
 required>
+
 </div>
 
 <div class="col-md-4">
-<label class="form-label">Precio Base</label>
+
+<label class="form-label">
+Precio Base
+</label>
+
 <input
 type="number"
 step="0.01"
@@ -79,10 +105,15 @@ class="form-control"
 placeholder="0.00"
 value="{% if servicio %}{{ servicio[2] }}{% endif %}"
 required>
+
 </div>
 
 <div class="col-md-4">
-<label class="form-label">Costo Base</label>
+
+<label class="form-label">
+Costo Base
+</label>
+
 <input
 type="number"
 step="0.01"
@@ -91,10 +122,15 @@ class="form-control"
 placeholder="0.00"
 value="{% if servicio %}{{ servicio[3] }}{% endif %}"
 required>
+
 </div>
 
 <div class="col-md-4">
-<label class="form-label">Duración (meses)</label>
+
+<label class="form-label">
+Duración (meses)
+</label>
+
 <input
 type="number"
 name="duracion"
@@ -102,18 +138,28 @@ class="form-control"
 placeholder="Ej: 12"
 value="{% if servicio %}{{ servicio[4] }}{% endif %}"
 required>
-</div>
 
 </div>
 
-<div class="form-actions mt-4 d-flex gap-2">
+</div>
+
+
+<!-- BOTONES -->
+
+<div class="form-actions mt-4 d-flex flex-wrap gap-2">
 
 <button type="submit" class="btn btn-primary">
+
+<i class="bi bi-check-lg me-1"></i>
 Guardar Servicio
+
 </button>
 
 <a href="/servicios" class="btn btn-outline-secondary">
+
+<i class="bi bi-arrow-left me-1"></i>
 Cancelar
+
 </a>
 
 </div>

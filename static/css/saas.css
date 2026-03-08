@@ -7,7 +7,7 @@ Sistema visual central del SaaS
 
 /* =================================
 COLOR SYSTEM
-Paleta SaaS moderna (no bootstrap)
+Paleta SaaS moderna
 ================================= */
 
 --saas-bg:#f6f8fb;
@@ -53,7 +53,6 @@ Paleta SaaS moderna (no bootstrap)
 
 /* =================================
 RADIUS SYSTEM
-Consistencia visual
 ================================= */
 
 --radius-xs:4px;
@@ -65,7 +64,6 @@ Consistencia visual
 
 /* =================================
 SHADOW SYSTEM
-Profundidad SaaS moderna
 ================================= */
 
 --shadow-xs:0 1px 2px rgba(0,0,0,0.03);
@@ -82,7 +80,6 @@ Profundidad SaaS moderna
 
 /* =================================
 SPACING SYSTEM
-Escala consistente
 ================================= */
 
 --space-1:4px;
@@ -107,8 +104,16 @@ LAYOUT SYSTEM
 
 
 /* =================================
-GLOBAL BODY
+GLOBAL RESET + BODY
 ================================= */
+
+*,
+*::before,
+*::after{
+
+box-sizing:border-box;
+
+}
 
 body,
 .saas-body{
@@ -127,7 +132,11 @@ line-height:1.55;
 -webkit-font-smoothing:antialiased;
 -moz-osx-font-smoothing:grayscale;
 
+text-rendering:optimizeLegibility;
+
 animation:saasFadeIn .25s ease;
+
+min-height:100vh;
 
 }
 
@@ -145,6 +154,8 @@ letter-spacing:-0.02em;
 color:var(--saas-text);
 
 margin:0 0 6px 0;
+
+line-height:1.25;
 
 }
 
@@ -282,6 +293,8 @@ vertical-align:middle;
 
 max-width:100%;
 
+height:auto;
+
 }
 
 
@@ -314,6 +327,8 @@ min-height:100vh;
 
 background:var(--saas-bg);
 
+width:100%;
+
 }
 
 
@@ -332,6 +347,8 @@ flex-direction:column;
 min-width:0;
 
 background:var(--saas-bg);
+
+position:relative;
 
 }
 
@@ -353,6 +370,10 @@ gap:var(--space-7);
 padding:var(--space-8);
 
 width:100%;
+
+max-width:var(--content-max);
+
+margin:0 auto;
 
 box-sizing:border-box;
 
@@ -392,6 +413,8 @@ gap:var(--space-7);
 
 width:100%;
 
+min-width:0;
+
 }
 
 
@@ -421,6 +444,8 @@ gap:24px;
 
 align-items:stretch;
 
+width:100%;
+
 }
 
 
@@ -435,6 +460,8 @@ display:flex;
 flex-direction:column;
 
 gap:18px;
+
+width:100%;
 
 }
 
@@ -456,6 +483,8 @@ gap:var(--space-4);
 flex-wrap:wrap;
 
 margin-bottom:var(--space-4);
+
+width:100%;
 
 }
 
@@ -547,6 +576,10 @@ justify-content:space-between;
 
 margin-bottom:14px;
 
+flex-wrap:wrap;
+
+gap:8px;
+
 }
 
 
@@ -575,6 +608,8 @@ align-items:center;
 
 gap:6px;
 
+flex-wrap:wrap;
+
 }
 
 
@@ -593,6 +628,8 @@ border-radius:var(--radius-lg);
 padding:var(--space-6);
 
 box-shadow:var(--shadow-xs);
+
+width:100%;
 
 }
 
@@ -629,6 +666,8 @@ padding:var(--space-6);
 
 padding:var(--space-5);
 
+gap:var(--space-6);
+
 }
 
 .dashboard-grid{
@@ -643,11 +682,21 @@ flex-direction:column;
 
 align-items:flex-start;
 
+gap:var(--space-3);
+
 }
 
 .page-actions{
 
 width:100%;
+
+}
+
+.section-header{
+
+flex-direction:column;
+
+align-items:flex-start;
 
 }
 
@@ -674,7 +723,16 @@ padding:18px 0;
 
 border-right:1px solid rgba(255,255,255,0.04);
 
-position:relative;
+/* FIX IMPORTANTE: sidebar fijo */
+
+position:sticky;
+top:0;
+
+height:100vh;
+
+overflow:hidden;
+
+z-index:30;
 
 }
 
@@ -694,6 +752,8 @@ border-bottom:1px solid rgba(255,255,255,0.06);
 
 margin-bottom:12px;
 
+flex-shrink:0;
+
 }
 
 
@@ -712,6 +772,8 @@ display:flex;
 align-items:center;
 gap:8px;
 
+white-space:nowrap;
+
 }
 
 
@@ -728,7 +790,11 @@ gap:4px;
 
 padding-top:6px;
 
+/* SCROLL INTERNO */
+
 overflow-y:auto;
+
+flex:1;
 
 scrollbar-width:none;
 
@@ -833,6 +899,8 @@ display:flex;
 align-items:center;
 justify-content:center;
 
+flex-shrink:0;
+
 }
 
 
@@ -847,6 +915,8 @@ height:1px;
 background:rgba(255,255,255,0.08);
 
 margin:16px 18px;
+
+flex-shrink:0;
 
 }
 
@@ -867,6 +937,8 @@ display:flex;
 flex-direction:column;
 
 gap:8px;
+
+flex-shrink:0;
 
 }
 
@@ -928,9 +1000,11 @@ position:sticky;
 
 top:0;
 
-z-index:20;
+z-index:25;
 
 box-shadow:var(--shadow-xs);
+
+backdrop-filter:saturate(180%) blur(6px);
 
 }
 
@@ -944,6 +1018,8 @@ TOPBAR LEFT
 display:flex;
 align-items:center;
 gap:var(--space-4);
+
+min-width:0;
 
 }
 
@@ -965,6 +1041,8 @@ color:var(--saas-text);
 display:flex;
 align-items:center;
 
+white-space:nowrap;
+
 }
 
 
@@ -978,6 +1056,8 @@ display:flex;
 align-items:center;
 
 gap:var(--space-3);
+
+flex-shrink:0;
 
 }
 
@@ -1064,6 +1144,8 @@ font-weight:600;
 
 color:#374151;
 
+flex-shrink:0;
+
 }
 
 
@@ -1113,6 +1195,18 @@ font-size:16px;
 
 }
 
+@media (max-width:640px){
+
+.user-info{
+display:none;
+}
+
+.topbar{
+height:54px;
+}
+
+}
+
 
 /* =================================
 BLOQUE 5 — DASHBOARD METRICS
@@ -1131,6 +1225,8 @@ grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
 gap:22px;
 
 align-items:stretch;
+
+width:100%;
 
 }
 
@@ -1187,7 +1283,7 @@ height:100%;
 
 background:var(--saas-primary);
 
-opacity:.85;
+opacity:.9;
 
 }
 
@@ -1217,6 +1313,8 @@ justify-content:space-between;
 
 margin-bottom:6px;
 
+gap:10px;
+
 }
 
 
@@ -1233,6 +1331,8 @@ letter-spacing:.06em;
 text-transform:uppercase;
 
 color:var(--saas-text-muted);
+
+white-space:nowrap;
 
 }
 
@@ -1331,6 +1431,29 @@ background:var(--saas-accent-soft);
 
 color:var(--saas-accent);
 
+flex-shrink:0;
+
+}
+
+
+/* =================================
+RESPONSIVE
+================================= */
+
+@media (max-width:768px){
+
+.metrics-row{
+
+grid-template-columns:1fr;
+
+}
+
+.metric-value{
+
+font-size:26px;
+
+}
+
 }
 
 
@@ -1353,6 +1476,8 @@ transition:
 transform .16s ease,
 box-shadow .16s ease,
 border-color .16s ease;
+
+position:relative;
 
 }
 
@@ -1394,6 +1519,10 @@ display:flex;
 align-items:center;
 justify-content:space-between;
 
+gap:10px;
+
+flex-wrap:wrap;
+
 }
 
 
@@ -1407,6 +1536,8 @@ font-weight:600;
 
 color:var(--saas-text);
 
+line-height:1.3;
+
 }
 
 
@@ -1418,6 +1549,8 @@ display:flex;
 align-items:center;
 
 gap:8px;
+
+flex-wrap:wrap;
 
 }
 
@@ -1434,6 +1567,8 @@ display:flex;
 flex-direction:column;
 
 gap:14px;
+
+min-width:0;
 
 }
 
@@ -1454,6 +1589,10 @@ display:flex;
 align-items:center;
 justify-content:space-between;
 
+gap:10px;
+
+flex-wrap:wrap;
+
 }
 
 
@@ -1473,6 +1612,8 @@ color:var(--saas-text);
 
 margin-bottom:4px;
 
+line-height:1.3;
+
 }
 
 
@@ -1485,6 +1626,8 @@ font-size:12.5px;
 color:var(--saas-text-muted);
 
 margin-bottom:14px;
+
+line-height:1.5;
 
 }
 
@@ -1520,6 +1663,8 @@ border:1px solid var(--saas-border);
 border-radius:var(--radius-lg);
 
 box-shadow:var(--shadow-xs);
+
+overflow:hidden;
 
 }
 
@@ -1560,6 +1705,8 @@ border-radius:var(--radius-lg);
 padding:var(--space-6);
 
 box-shadow:var(--shadow-xs);
+
+width:100%;
 
 }
 
@@ -1613,6 +1760,8 @@ overflow:hidden;
 
 box-shadow:var(--shadow-xs);
 
+width:100%;
+
 }
 
 
@@ -1633,6 +1782,10 @@ padding:16px 18px;
 border-bottom:1px solid var(--saas-border-soft);
 
 background:#ffffff;
+
+gap:10px;
+
+flex-wrap:wrap;
 
 }
 
@@ -1679,6 +1832,8 @@ border-spacing:0;
 
 background:#ffffff;
 
+min-width:600px;
+
 }
 
 
@@ -1716,7 +1871,9 @@ position:sticky;
 
 top:0;
 
-z-index:1;
+z-index:2;
+
+background:var(--saas-bg-soft);
 
 }
 
@@ -1794,6 +1951,8 @@ align-items:center;
 
 gap:6px;
 
+flex-wrap:wrap;
+
 }
 
 
@@ -1810,6 +1969,8 @@ font-weight:500;
 padding:4px 8px;
 
 border-radius:var(--radius-sm);
+
+white-space:nowrap;
 
 }
 
@@ -1831,6 +1992,8 @@ border-radius:var(--radius-sm);
 font-size:11px;
 
 font-weight:500;
+
+white-space:nowrap;
 
 }
 
@@ -1901,6 +2064,8 @@ border:1px solid var(--saas-border);
 
 background:#ffffff;
 
+-webkit-overflow-scrolling:touch;
+
 }
 
 
@@ -1932,11 +2097,16 @@ min-height:32px;
 
 background:#ffffff;
 
+white-space:nowrap;
+
+user-select:none;
+
 transition:
 background .14s ease,
 border-color .14s ease,
 box-shadow .14s ease,
-transform .08s ease;
+transform .08s ease,
+color .14s ease;
 
 }
 
@@ -2156,6 +2326,8 @@ display:inline-flex;
 
 gap:4px;
 
+flex-wrap:wrap;
+
 }
 
 
@@ -2177,6 +2349,8 @@ padding:0;
 
 border-radius:var(--radius-sm);
 
+flex-shrink:0;
+
 }
 
 
@@ -2193,6 +2367,8 @@ cursor:not-allowed;
 transform:none;
 
 box-shadow:none;
+
+pointer-events:none;
 
 }
 
@@ -2217,6 +2393,8 @@ border-radius:var(--radius-lg);
 
 box-shadow:var(--shadow-xs);
 
+overflow:hidden;
+
 }
 
 
@@ -2230,6 +2408,8 @@ display:flex;
 flex-direction:column;
 
 gap:16px;
+
+min-width:0;
 
 }
 
@@ -2249,6 +2429,8 @@ color:#374151;
 margin-bottom:3px;
 
 letter-spacing:.02em;
+
+display:inline-block;
 
 }
 
@@ -2368,6 +2550,8 @@ align-items:center;
 
 gap:10px;
 
+flex-wrap:wrap;
+
 }
 
 
@@ -2431,6 +2615,8 @@ grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
 
 gap:16px;
 
+width:100%;
+
 }
 
 
@@ -2462,6 +2648,8 @@ position:relative;
 display:flex;
 
 align-items:center;
+
+width:100%;
 
 }
 
@@ -2502,6 +2690,8 @@ font-size:12.5px;
 
 cursor:pointer;
 
+width:100%;
+
 }
 
 
@@ -2531,7 +2721,8 @@ transition:
 
 background .14s ease,
 border-color .14s ease,
-box-shadow .14s ease;
+box-shadow .14s ease,
+transform .08s ease;
 
 }
 
@@ -2544,6 +2735,8 @@ background:#f1f5f9;
 
 border-color:#cbd5e1;
 
+transform:translateY(-1px);
+
 }
 
 
@@ -2552,6 +2745,8 @@ border-color:#cbd5e1;
 input[type="file"]::file-selector-button:active{
 
 background:#e2e8f0;
+
+transform:translateY(0);
 
 }
 
@@ -2570,6 +2765,8 @@ align-items:center;
 gap:6px;
 
 flex-wrap:wrap;
+
+min-width:0;
 
 }
 
@@ -2595,11 +2792,14 @@ background:#ffffff;
 
 cursor:pointer;
 
+white-space:nowrap;
+
 transition:
 
 background .12s ease,
 border-color .12s ease,
-transform .08s ease;
+transform .08s ease,
+box-shadow .12s ease;
 
 }
 
@@ -2613,6 +2813,8 @@ background:#f8fafc;
 border-color:#cbd5e1;
 
 transform:translateY(-1px);
+
+box-shadow:0 2px 6px rgba(0,0,0,0.06);
 
 }
 
@@ -2633,6 +2835,8 @@ color:#ffffff;
 
 background:var(--saas-primary-hover);
 
+border-color:var(--saas-primary-hover);
+
 }
 
 
@@ -2652,6 +2856,8 @@ color:#ffffff;
 
 background:#059669;
 
+border-color:#059669;
+
 }
 
 
@@ -2670,6 +2876,8 @@ color:#ffffff;
 .file-btn.secondary:hover{
 
 background:#4b5563;
+
+border-color:#4b5563;
 
 }
 
@@ -2699,6 +2907,8 @@ gap:8px;
 
 flex-wrap:wrap;
 
+width:100%;
+
 }
 
 
@@ -2715,6 +2925,8 @@ font-weight:500;
 color:var(--saas-primary);
 
 text-decoration:none;
+
+white-space:nowrap;
 
 }
 
@@ -2750,6 +2962,8 @@ border-bottom:1px solid var(--saas-border-soft);
 background:#ffffff;
 
 flex-wrap:wrap;
+
+width:100%;
 
 }
 
@@ -2871,6 +3085,8 @@ background:#ffffff;
 
 cursor:pointer;
 
+white-space:nowrap;
+
 transition:
 
 background .14s ease,
@@ -2909,6 +3125,8 @@ background:#ffffff;
 
 cursor:pointer;
 
+white-space:nowrap;
+
 transition:
 
 background .14s ease,
@@ -2936,6 +3154,8 @@ align-items:center;
 gap:6px;
 
 font-size:12px;
+
+flex-wrap:wrap;
 
 }
 
@@ -2966,6 +3186,8 @@ margin-top:10px;
 
 font-size:12px;
 
+flex-wrap:wrap;
+
 }
 
 
@@ -2982,6 +3204,8 @@ background:#ffffff;
 border-radius:var(--radius-xs);
 
 cursor:pointer;
+
+white-space:nowrap;
 
 transition:
 
@@ -3037,6 +3261,8 @@ gap:8px;
 
 color:var(--saas-text-muted);
 
+width:100%;
+
 }
 
 
@@ -3050,6 +3276,8 @@ font-weight:600;
 
 color:var(--saas-text);
 
+line-height:1.3;
+
 }
 
 
@@ -3062,6 +3290,8 @@ font-size:12.5px;
 color:var(--saas-text-muted);
 
 max-width:320px;
+
+line-height:1.5;
 
 }
 
@@ -3099,6 +3329,8 @@ font-size:13px;
 
 color:var(--saas-text-muted);
 
+width:100%;
+
 }
 
 
@@ -3116,6 +3348,8 @@ border-top:2px solid var(--saas-primary);
 border-radius:50%;
 
 animation:spin .7s linear infinite;
+
+flex-shrink:0;
 
 }
 
@@ -3150,6 +3384,8 @@ display:flex;
 align-items:center;
 
 gap:8px;
+
+flex-wrap:wrap;
 
 }
 
@@ -3235,6 +3471,8 @@ border-radius:var(--radius-xs);
 
 overflow:hidden;
 
+width:100%;
+
 }
 
 .progress-bar{
@@ -3268,6 +3506,8 @@ animation:skeletonLoading 1.4s ease infinite;
 border-radius:var(--radius-sm);
 
 height:12px;
+
+width:100%;
 
 }
 
@@ -3308,6 +3548,8 @@ z-index:1000;
 
 padding:20px;
 
+backdrop-filter:blur(4px);
+
 }
 
 
@@ -3332,6 +3574,8 @@ flex-direction:column;
 overflow:hidden;
 
 animation:modalFade .18s ease;
+
+max-height:90vh;
 
 }
 
@@ -3373,6 +3617,8 @@ padding:16px 20px;
 
 border-bottom:1px solid var(--saas-border-soft);
 
+gap:10px;
+
 }
 
 
@@ -3385,6 +3631,8 @@ font-size:15px;
 font-weight:600;
 
 color:var(--saas-text);
+
+line-height:1.3;
 
 }
 
@@ -3403,13 +3651,28 @@ color:var(--saas-text-muted);
 
 cursor:pointer;
 
-transition:color .12s ease;
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+width:28px;
+height:28px;
+
+border-radius:var(--radius-sm);
+
+transition:
+
+color .12s ease,
+background .12s ease;
 
 }
 
 .modal-close:hover{
 
 color:var(--saas-text);
+
+background:#f1f5f9;
 
 }
 
@@ -3427,6 +3690,8 @@ font-size:13px;
 color:var(--saas-text-muted);
 
 line-height:1.5;
+
+overflow-y:auto;
 
 }
 
@@ -3448,6 +3713,8 @@ gap:8px;
 padding:14px 20px;
 
 border-top:1px solid var(--saas-border-soft);
+
+flex-wrap:wrap;
 
 }
 
@@ -3488,6 +3755,41 @@ height:90%;
 
 
 /* =================================
+RESPONSIVE
+================================= */
+
+@media (max-width:768px){
+
+.modal{
+
+max-width:100%;
+
+margin:0 10px;
+
+}
+
+.modal-body{
+
+padding:18px;
+
+}
+
+.modal-header{
+
+padding:14px 18px;
+
+}
+
+.modal-footer{
+
+padding:12px 18px;
+
+}
+
+}
+
+
+/* =================================
 BLOQUE 14 — DROPDOWNS
 Componentes desplegables estilo SaaS
 ================================= */
@@ -3515,6 +3817,8 @@ align-items:center;
 gap:6px;
 
 cursor:pointer;
+
+user-select:none;
 
 }
 
@@ -3547,6 +3851,10 @@ z-index:100;
 display:none;
 
 animation:dropdownFade .14s ease;
+
+max-height:300px;
+
+overflow-y:auto;
 
 }
 
@@ -3605,6 +3913,8 @@ color:var(--saas-text);
 
 text-decoration:none;
 
+white-space:nowrap;
+
 transition:
 
 background .12s ease,
@@ -3643,6 +3953,8 @@ opacity:.5;
 
 cursor:not-allowed;
 
+pointer-events:none;
+
 }
 
 
@@ -3670,6 +3982,8 @@ DROPDOWN ICON
 font-size:13px;
 
 opacity:.7;
+
+flex-shrink:0;
 
 }
 
@@ -3711,10 +4025,11 @@ CARD HOVER
 .table-card{
 
 transition:
-
 transform .18s ease,
 box-shadow .18s ease,
 border-color .18s ease;
+
+will-change:transform, box-shadow;
 
 }
 
@@ -3736,11 +4051,13 @@ BUTTON INTERACTION
 .btn{
 
 transition:
-
 transform .08s ease,
 box-shadow .14s ease,
 background .14s ease,
-border-color .14s ease;
+border-color .14s ease,
+color .14s ease;
+
+will-change:transform;
 
 }
 
@@ -3768,7 +4085,6 @@ SIDEBAR LINK INTERACTION
 .sidebar-link{
 
 transition:
-
 background .14s ease,
 color .14s ease,
 transform .12s ease;
@@ -3789,7 +4105,6 @@ TABLE ROW INTERACTION
 .table tbody tr{
 
 transition:
-
 background .12s ease,
 transform .06s ease;
 
@@ -3812,7 +4127,6 @@ INPUT INTERACTION
 .form-select{
 
 transition:
-
 border-color .14s ease,
 box-shadow .14s ease,
 background .14s ease;
@@ -3834,9 +4148,10 @@ ICON BUTTON INTERACTION
 .btn-icon{
 
 transition:
-
 transform .12s ease,
 box-shadow .12s ease;
+
+will-change:transform;
 
 }
 
@@ -3857,6 +4172,8 @@ DROPDOWN INTERACTION
 
 transform-origin:top right;
 
+will-change:opacity, transform;
+
 }
 
 
@@ -3867,7 +4184,6 @@ TABLE ACTION BUTTONS
 .table .btn{
 
 transition:
-
 transform .08s ease,
 box-shadow .12s ease;
 
@@ -3878,6 +4194,20 @@ box-shadow .12s ease;
 transform:translateY(-1px);
 
 box-shadow:0 2px 6px rgba(0,0,0,0.08);
+
+}
+
+
+/* =================================
+REDUCE MOTION (ACCESSIBILITY)
+================================= */
+
+@media (prefers-reduced-motion:reduce){
+
+*{
+transition:none !important;
+animation:none !important;
+}
 
 }
 
@@ -3926,6 +4256,8 @@ Elementos principales del sistema
 
 border-radius:var(--radius-lg);
 
+overflow:hidden;
+
 }
 
 .btn{
@@ -3970,6 +4302,8 @@ INPUT GROUP
 display:flex;
 
 align-items:center;
+
+width:100%;
 
 }
 
@@ -4028,6 +4362,8 @@ AVATAR
 
 border-radius:50%;
 
+overflow:hidden;
+
 }
 
 
@@ -4044,22 +4380,27 @@ Para métricas o indicadores
 
 .accent-primary{
 border-left:4px solid var(--saas-primary);
+padding-left:12px;
 }
 
 .accent-success{
 border-left:4px solid var(--saas-success);
+padding-left:12px;
 }
 
 .accent-warning{
 border-left:4px solid var(--saas-warning);
+padding-left:12px;
 }
 
 .accent-danger{
 border-left:4px solid var(--saas-danger);
+padding-left:12px;
 }
 
 .accent-accent{
 border-left:4px solid var(--saas-accent);
+padding-left:12px;
 }
 
 
@@ -4229,6 +4570,12 @@ width:100%;
 
 max-width:420px;
 
+display:flex;
+
+flex-direction:column;
+
+align-items:center;
+
 }
 
 
@@ -4253,6 +4600,8 @@ flex-direction:column;
 gap:18px;
 
 animation:loginFade .25s ease;
+
+width:100%;
 
 }
 
@@ -4303,6 +4652,8 @@ color:var(--saas-text);
 
 margin-bottom:4px;
 
+line-height:1.2;
+
 }
 
 
@@ -4313,6 +4664,8 @@ margin-bottom:4px;
 font-size:13px;
 
 color:var(--saas-text-muted);
+
+line-height:1.5;
 
 }
 
@@ -4326,6 +4679,8 @@ display:flex;
 flex-direction:column;
 
 gap:12px;
+
+width:100%;
 
 }
 
@@ -4418,6 +4773,27 @@ color:var(--saas-primary);
 
 
 /* =================================
+RESPONSIVE
+================================= */
+
+@media (max-width:480px){
+
+.login-card{
+
+padding:26px;
+
+}
+
+.login-title{
+
+font-size:20px;
+
+}
+
+}
+
+
+/* =================================
 BLOQUE 19 — PAGE TRANSITIONS
 Animaciones suaves entre páginas
 ================================= */
@@ -4428,6 +4804,8 @@ Animaciones suaves entre páginas
 .page-wrapper{
 
 animation:pageFade .28s ease;
+
+will-change:opacity, transform;
 
 }
 
@@ -4459,6 +4837,8 @@ transform:translateY(0);
 
 animation:tableFade .32s ease;
 
+will-change:opacity, transform;
+
 }
 
 @keyframes tableFade{
@@ -4486,6 +4866,8 @@ transform:translateY(0);
 
 animation:formFade .28s ease;
 
+will-change:opacity, transform;
+
 }
 
 @keyframes formFade{
@@ -4507,11 +4889,13 @@ transform:translateY(0);
 }
 
 
-/* METRIC CARDS DELAY */
+/* METRIC CARDS */
 
 .metric-card{
 
 animation:metricFade .35s ease;
+
+will-change:opacity, transform;
 
 }
 
@@ -4528,6 +4912,23 @@ to{
 
 opacity:1;
 transform:translateY(0);
+
+}
+
+}
+
+/* =================================
+REDUCE MOTION (ACCESSIBILITY)
+================================= */
+
+@media (prefers-reduced-motion:reduce){
+
+.page-wrapper,
+.table-card,
+.form-card,
+.metric-card{
+
+animation:none !important;
 
 }
 
@@ -4553,24 +4954,38 @@ border-radius:999px;
 
 letter-spacing:.2px;
 
+white-space:nowrap;
+
+line-height:1;
+
 }
+
+
+/* STATUS DOT */
 
 .status-dot{
 
 width:6px;
 height:6px;
+
 border-radius:50%;
 
 display:inline-block;
 
+flex-shrink:0;
+
 }
+
 
 /* ACTIVO */
 
 .status-active{
 
 background:#e8f7ee;
+
 color:#0f7a3e;
+
+border:1px solid #d1f1dd;
 
 }
 
@@ -4580,12 +4995,16 @@ background:#1fbf75;
 
 }
 
+
 /* POR VENCER */
 
 .status-warning{
 
 background:#fff4e5;
+
 color:#b26a00;
+
+border:1px solid #ffe0b2;
 
 }
 
@@ -4595,12 +5014,16 @@ background:#ff9f1a;
 
 }
 
+
 /* VENCIDO */
 
 .status-expired{
 
 background:#ffeaea;
+
 color:#b42318;
+
+border:1px solid #ffd5d5;
 
 }
 
@@ -4629,7 +5052,12 @@ margin-bottom:6px;
 
 overflow:hidden;
 
+position:relative;
+
 }
+
+
+/* PROGRESS */
 
 .storage-progress{
 
@@ -4639,7 +5067,10 @@ border-radius:6px;
 
 transition:width .6s ease;
 
+will-change:width;
+
 }
+
 
 /* STORAGE NORMAL */
 
@@ -4653,6 +5084,7 @@ background:linear-gradient(
 
 }
 
+
 /* STORAGE MEDIO */
 
 .storage-warning{
@@ -4665,7 +5097,8 @@ background:linear-gradient(
 
 }
 
-/* STORAGE CRITICO */
+
+/* STORAGE CRÍTICO */
 
 .storage-danger{
 
@@ -4683,48 +5116,125 @@ BLOQUE 22 - ALERT PANEL SaaS
 ================================ */
 
 .alert-panel{
+
 display:flex;
+
 gap:12px;
+
 margin-bottom:20px;
+
 flex-wrap:wrap;
+
+width:100%;
+
 }
+
+
+/* ALERT ITEM */
 
 .alert-item{
+
 display:flex;
+
 align-items:center;
+
 gap:10px;
+
 padding:10px 14px;
+
 border-radius:10px;
+
 font-size:14px;
+
 font-weight:500;
+
+white-space:nowrap;
+
+border:1px solid transparent;
+
+transition:
+transform .12s ease,
+box-shadow .12s ease;
+
 }
+
+
+/* HOVER */
+
+.alert-item:hover{
+
+transform:translateY(-1px);
+
+box-shadow:0 3px 8px rgba(0,0,0,0.06);
+
+}
+
+
+/* DANGER */
 
 .alert-danger{
+
 background:#ffeaea;
+
 color:#b42318;
+
+border-color:#ffd5d5;
+
 }
+
+
+/* WARNING */
 
 .alert-warning{
+
 background:#fff4e5;
+
 color:#b26a00;
+
+border-color:#ffe2b8;
+
 }
+
+
+/* ICON */
 
 .alert-icon{
+
 font-size:16px;
+
+flex-shrink:0;
+
 }
 
+
+/* ACTION LINK */
+
 .alert-action{
+
 margin-left:10px;
+
 font-size:13px;
+
 font-weight:600;
+
 text-decoration:none;
+
 color:inherit;
+
 opacity:.8;
+
+white-space:nowrap;
+
+transition:opacity .12s ease;
+
 }
 
 .alert-action:hover{
+
 opacity:1;
+
 text-decoration:underline;
+
 }
 
 
@@ -4735,16 +5245,45 @@ BLOQUE 23 - BOTÓN CONTABILIDAD
 .btn-dark{
 
 background:#1f2937;
+
 color:#ffffff !important;
 
-border:none;
+border:1px solid #1f2937;
+
+display:inline-flex;
+
+align-items:center;
+justify-content:center;
+
+gap:6px;
+
+transition:
+background .14s ease,
+border-color .14s ease,
+box-shadow .14s ease,
+transform .08s ease;
 
 }
 
 .btn-dark:hover{
 
 background:#111827;
+
+border-color:#111827;
+
 color:#ffffff;
+
+transform:translateY(-1px);
+
+box-shadow:0 3px 8px rgba(0,0,0,0.12);
+
+}
+
+.btn-dark:active{
+
+transform:translateY(0);
+
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
 
 }
 
@@ -4756,19 +5295,52 @@ BLOQUE 24 - ACTION GROUP SaaS
 .action-group{
 
 display:flex;
+
 align-items:center;
+
 gap:10px;
 
+flex-wrap:wrap;
+
 }
+
+
+/* ACTION BUTTON */
 
 .action-btn{
 
 min-width:110px;
 
-display:flex;
+display:inline-flex;
+
 align-items:center;
 justify-content:center;
 
 font-weight:500;
+
+gap:6px;
+
+white-space:nowrap;
+
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width:768px){
+
+.action-group{
+
+width:100%;
+
+}
+
+.action-btn{
+
+flex:1;
+
+min-width:auto;
+
+}
 
 }

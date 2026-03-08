@@ -8,9 +8,19 @@
 <div class="card form-card">
 
 <div class="card-header">
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+
 <div class="form-title">
 Renovación de Servicio
 </div>
+
+<div class="text-muted small">
+Registrar renovación del cliente
+</div>
+
+</div>
+
 </div>
 
 <div class="card-body">
@@ -20,28 +30,39 @@ Renovación de Servicio
 
 <!-- INFORMACIÓN DEL CLIENTE -->
 
-<div class="section-title mb-2">
+<div class="section-title mb-3">
+<i class="bi bi-person-check me-2"></i>
 Información del Cliente
 </div>
 
 <div class="row g-4">
 
 <div class="col-md-6">
-<label class="form-label">Código Venta</label>
+
+<label class="form-label">
+Código Venta
+</label>
+
 <input
 type="text"
 class="form-control"
 value="{{ codigo }}"
 readonly>
+
 </div>
 
 <div class="col-md-6">
-<label class="form-label">Cliente</label>
+
+<label class="form-label">
+Cliente
+</label>
+
 <input
 type="text"
 class="form-control"
 value="{{ cliente }}"
 readonly>
+
 </div>
 
 </div>
@@ -52,32 +73,45 @@ readonly>
 
 <!-- PROVEEDOR -->
 
-<div class="section-title mb-2">
+<div class="section-title mb-3">
+<i class="bi bi-building me-2"></i>
 Proveedor del Servicio
 </div>
 
 <div class="row g-4">
 
 <div class="col-md-6">
-<label class="form-label">Proveedor existente</label>
+
+<label class="form-label">
+Proveedor existente
+</label>
+
 <select name="proveedor_select" class="form-select">
 
-<option value="">Seleccionar proveedor</option>
+<option value="">
+Seleccionar proveedor
+</option>
 
 {% for p in proveedores %}
 <option value="{{ p[0] }}">{{ p[0] }}</option>
 {% endfor %}
 
 </select>
+
 </div>
 
 <div class="col-md-6">
-<label class="form-label">Nuevo proveedor</label>
+
+<label class="form-label">
+Nuevo proveedor
+</label>
+
 <input
 type="text"
 name="proveedor_nuevo"
 class="form-control"
 placeholder="Si no existe, escribe el proveedor">
+
 </div>
 
 </div>
@@ -88,14 +122,19 @@ placeholder="Si no existe, escribe el proveedor">
 
 <!-- INFORMACIÓN DE PAGO -->
 
-<div class="section-title mb-2">
+<div class="section-title mb-3">
+<i class="bi bi-cash-coin me-2"></i>
 Pago al Proveedor
 </div>
 
 <div class="row g-4">
 
 <div class="col-md-6">
-<label class="form-label">Monto pagado al tercero (USDT)</label>
+
+<label class="form-label">
+Monto pagado al tercero (USDT)
+</label>
+
 <input
 type="number"
 step="0.01"
@@ -103,28 +142,46 @@ name="monto_tercero"
 class="form-control"
 placeholder="Ej: 15.50"
 required>
+
 </div>
 
 <div class="col-md-6">
-<label class="form-label">Comprobante Bancario</label>
+
+<label class="form-label">
+Comprobante Bancario
+</label>
+
 <input
 type="file"
 name="comprobante_banco"
 class="form-control"
 required>
+
+<div class="form-text">
+Formatos permitidos: JPG o PDF
 </div>
 
 </div>
 
+</div>
 
-<div class="form-actions mt-4 d-flex gap-2">
+
+<!-- BOTONES -->
+
+<div class="form-actions mt-4 d-flex flex-wrap gap-2">
 
 <button type="submit" class="btn btn-warning">
+
+<i class="bi bi-arrow-repeat me-1"></i>
 Renovar Servicio
+
 </button>
 
 <a href="/" class="btn btn-outline-secondary">
+
+<i class="bi bi-arrow-left me-1"></i>
 Cancelar
+
 </a>
 
 </div>

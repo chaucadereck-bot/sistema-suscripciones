@@ -7,13 +7,13 @@
 
 <div class="card table-card">
 
-<div class="card-header d-flex justify-content-between align-items-center">
+<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
 
 <div class="table-title">
 Registro de Ventas
 </div>
 
-<div class="table-sub">
+<div class="table-sub text-muted small">
 Historial contable de ventas registradas
 </div>
 
@@ -46,15 +46,25 @@ Historial contable de ventas registradas
 
 <tr>
 
-<td class="fw-semibold">{{ d[0] }}</td>
+<td class="fw-semibold">
+{{ d[0] }}
+</td>
 
-<td>{{ d[1] }}</td>
+<td>
+{{ d[1] }}
+</td>
 
-<td>{{ d[2] }}</td>
+<td>
+{{ d[2] }}
+</td>
 
-<td>{{ d[3] }}</td>
+<td>
+{{ d[3] }}
+</td>
 
-<td>{{ d[4] }}</td>
+<td>
+{{ d[4] }}
+</td>
 
 <td class="text-end text-success fw-semibold">
 $ {{ d[5] }}
@@ -76,7 +86,7 @@ $ {{ d[7] }}
 <form action="/subir_archivo/venta_nota/{{ d[0] }}"
 method="POST"
 enctype="multipart/form-data"
-class="d-flex align-items-center gap-2">
+class="d-flex flex-wrap align-items-center gap-2">
 
 <input
 type="file"
@@ -92,14 +102,20 @@ onchange="this.form.submit()"
 <a href="{{ d[8] }}"
 target="_blank"
 class="btn btn-outline-secondary btn-sm">
+
+<i class="bi bi-eye"></i>
 Ver
+
 </a>
 
 <button
 type="button"
 class="btn btn-outline-primary btn-sm"
 onclick="document.getElementById('nota_{{ d[0] }}').click()">
+
+<i class="bi bi-upload"></i>
 Reemplazar
+
 </button>
 
 {% else %}
@@ -108,7 +124,10 @@ Reemplazar
 type="button"
 class="btn btn-success btn-sm"
 onclick="document.getElementById('nota_{{ d[0] }}').click()">
+
+<i class="bi bi-upload"></i>
 Subir
+
 </button>
 
 {% endif %}
@@ -125,7 +144,7 @@ Subir
 <form action="/subir_archivo/venta_banco/{{ d[0] }}"
 method="POST"
 enctype="multipart/form-data"
-class="d-flex align-items-center gap-2">
+class="d-flex flex-wrap align-items-center gap-2">
 
 <input
 type="file"
@@ -141,14 +160,20 @@ onchange="this.form.submit()"
 <a href="{{ d[9] }}"
 target="_blank"
 class="btn btn-outline-secondary btn-sm">
+
+<i class="bi bi-eye"></i>
 Ver
+
 </a>
 
 <button
 type="button"
 class="btn btn-outline-primary btn-sm"
 onclick="document.getElementById('banco_{{ d[0] }}').click()">
+
+<i class="bi bi-upload"></i>
 Reemplazar
+
 </button>
 
 {% else %}
@@ -157,7 +182,10 @@ Reemplazar
 type="button"
 class="btn btn-success btn-sm"
 onclick="document.getElementById('banco_{{ d[0] }}').click()">
+
+<i class="bi bi-upload"></i>
 Subir
+
 </button>
 
 {% endif %}

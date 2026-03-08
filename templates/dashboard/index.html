@@ -5,19 +5,17 @@
 
 {% block content %}
 
-<!-- ================================
-BLOQUE ALERTAS DASHBOARD
-================================ -->
+<!-- ALERTAS DASHBOARD -->
 
 {% if total_vencidos > 0 or total_por_vencer > 0 %}
 
-<div class="alert-panel">
+<div class="alert-panel mb-4">
 
 {% if total_vencidos > 0 %}
 <div class="alert-item alert-danger">
 
 <div class="alert-icon">
-⚠
+<i class="bi bi-exclamation-triangle"></i>
 </div>
 
 <div class="alert-text">
@@ -35,7 +33,7 @@ Ver clientes
 <div class="alert-item alert-warning">
 
 <div class="alert-icon">
-⏳
+<i class="bi bi-hourglass-split"></i>
 </div>
 
 <div class="alert-text">
@@ -55,23 +53,24 @@ Revisar
 
 
 
-<!-- ================================
-BLOQUE 1 — MÉTRICAS DASHBOARD
-================================ -->
+<!-- MÉTRICAS -->
 
 <div class="row g-4 mb-4">
 
-<div class="col-xl-3 col-md-6">
+<div class="col-xl-3 col-lg-6 col-md-6">
 <div class="card metric-card h-100">
 <div class="card-body">
 
 <div class="metric-header">
+
 <div class="metric-title">
 Clientes Activos
 </div>
+
 <div class="metric-icon">
-👤
+<i class="bi bi-person-check"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-success">
@@ -84,17 +83,20 @@ Clientes Activos
 
 
 
-<div class="col-xl-3 col-md-6">
+<div class="col-xl-3 col-lg-6 col-md-6">
 <div class="card metric-card h-100">
 <div class="card-body">
 
 <div class="metric-header">
+
 <div class="metric-title">
 Por Vencer
 </div>
+
 <div class="metric-icon">
-⏳
+<i class="bi bi-hourglass-split"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-warning">
@@ -107,17 +109,20 @@ Por Vencer
 
 
 
-<div class="col-xl-3 col-md-6">
+<div class="col-xl-3 col-lg-6 col-md-6">
 <div class="card metric-card h-100">
 <div class="card-body">
 
 <div class="metric-header">
+
 <div class="metric-title">
 Vencidos
 </div>
+
 <div class="metric-icon">
-⚠️
+<i class="bi bi-exclamation-triangle"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-danger">
@@ -130,21 +135,22 @@ Vencidos
 
 
 
-<!-- ================================
-BLOQUE STORAGE INTELIGENTE
-================================ -->
+<!-- STORAGE -->
 
-<div class="col-xl-3 col-md-6">
+<div class="col-xl-3 col-lg-6 col-md-6">
 <div class="card metric-card h-100">
 <div class="card-body">
 
 <div class="metric-header">
+
 <div class="metric-title">
 Storage Usado
 </div>
+
 <div class="metric-icon">
-💾
+<i class="bi bi-hdd"></i>
 </div>
+
 </div>
 
 <div class="metric-value">
@@ -183,29 +189,30 @@ Storage Usado
 
 
 
-<!-- ================================
-BLOQUE 2 — TABLA DE CLIENTES
-================================ -->
+<!-- TABLA CLIENTES -->
 
 <div class="card table-card">
 
-<div class="card-header d-flex justify-content-between align-items-center">
+<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
 
 <div class="table-title">
 Listado de Clientes
 </div>
 
-<div class="action-group">
+<div class="action-group d-flex flex-wrap gap-2">
 
 <a href="/agregar" class="btn btn-primary btn-sm action-btn">
-+ Cliente
+<i class="bi bi-plus-lg"></i>
+Cliente
 </a>
 
 <a href="/contabilidad" class="btn btn-dark btn-sm action-btn">
+<i class="bi bi-bar-chart"></i>
 Contabilidad
 </a>
 
 <a href="/servicios" class="btn btn-success btn-sm action-btn">
+<i class="bi bi-box-seam"></i>
 Servicios
 </a>
 
@@ -214,10 +221,6 @@ Servicios
 </div>
 
 
-
-<!-- ================================
-BLOQUE 3 — TABLA
-================================ -->
 
 <div class="table-responsive">
 
@@ -300,20 +303,25 @@ Activo
 
 <td class="text-end">
 
-<div class="d-flex justify-content-end gap-2">
+<div class="d-flex justify-content-end flex-wrap gap-2">
 
 <a href="/renovar/{{ d[0] }}" class="btn btn-warning btn-sm">
+<i class="bi bi-arrow-repeat"></i>
 Renovar
 </a>
 
 <a href="/editar/{{ d[0] }}" class="btn btn-primary btn-sm">
+<i class="bi bi-pencil"></i>
 Editar
 </a>
 
 <a href="/eliminar/{{ d[0] }}"
 class="btn btn-danger btn-sm"
 onclick="return confirm('⚠️ ¿Seguro que deseas eliminar este cliente?')">
+
+<i class="bi bi-trash"></i>
 Eliminar
+
 </a>
 
 </div>

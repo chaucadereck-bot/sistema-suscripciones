@@ -41,35 +41,35 @@ Gestión de Licencias
 <span class="menu-icon">
 <i class="bi bi-people"></i>
 </span>
-<span>Clientes</span>
+<span class="menu-text">Clientes</span>
 </a>
 
 <a href="/ventas_contables" class="sidebar-link {% if '/ventas_contables' in request.path %}active{% endif %}">
 <span class="menu-icon">
 <i class="bi bi-cash-stack"></i>
 </span>
-<span>Ventas Registradas</span>
+<span class="menu-text">Ventas Registradas</span>
 </a>
 
 <a href="/pagos_terceros" class="sidebar-link {% if '/pagos_terceros' in request.path %}active{% endif %}">
 <span class="menu-icon">
 <i class="bi bi-credit-card"></i>
 </span>
-<span>Pagos a Terceros</span>
+<span class="menu-text">Pagos a Terceros</span>
 </a>
 
 <a href="/contabilidad" class="sidebar-link {% if '/contabilidad' in request.path %}active{% endif %}">
 <span class="menu-icon">
 <i class="bi bi-bar-chart-line"></i>
 </span>
-<span>Registro Contable</span>
+<span class="menu-text">Registro Contable</span>
 </a>
 
 <a href="/servicios" class="sidebar-link {% if '/servicios' in request.path %}active{% endif %}">
 <span class="menu-icon">
 <i class="bi bi-box-seam"></i>
 </span>
-<span>Servicios Digitales</span>
+<span class="menu-text">Servicios Digitales</span>
 </a>
 
 </nav>
@@ -78,7 +78,7 @@ Gestión de Licencias
 
 <a href="{{ url_for('logout') }}" class="sidebar-logout">
 <i class="bi bi-box-arrow-right"></i>
-Cerrar sesión
+<span>Cerrar sesión</span>
 </a>
 
 </div>
@@ -93,9 +93,9 @@ Cerrar sesión
 
 <div class="topbar-left">
 
-<div class="topbar-title">
+<h1 class="topbar-title">
 {% block header %}{% endblock %}
-</div>
+</h1>
 
 </div>
 
@@ -128,7 +128,7 @@ Administrador
 
 <main class="content">
 
-<div class="page-wrapper">
+<div class="container-fluid page-wrapper">
 
 {% block content %}{% endblock %}
 
