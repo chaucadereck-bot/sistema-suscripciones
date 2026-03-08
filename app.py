@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, send_from_directory
+from flask_compress import Compress
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -13,6 +14,19 @@ from PIL import Image
 import io
 from werkzeug.utils import secure_filename
 from functools import wraps
+import traceback
+import logging
+
+
+# ======================================
+# LOGGING
+# ======================================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 
 def login_required(f):
@@ -31,6 +45,9 @@ http.headers.update({
 })
 
 app = Flask(__name__)
+
+# Activar compresión gzip
+Compress(app)
 
 # ======================================
 # CONFIGURACIÓN DE SESIONES
@@ -123,7 +140,7 @@ def obtener_conexion():
             return conn
 
     except Exception as e:
-        print("Error conectando a la base de datos:", e)
+        logger.error("Error conectando a la base de datos: %s", e)
         raise
 
 
@@ -213,7 +230,7 @@ def crear_tabla():
 
     except Exception as e:
         conexion.rollback()
-        print("Error creando tabla ventas:", e)
+        logger.error("Error creando tabla ventas: %s", e)
         raise
 
     finally:
@@ -285,7 +302,7 @@ def crear_tablas_contables():
 
     except Exception as e:
         conexion.rollback()
-        print("Error creando tablas contables:", e)
+        logger.error("Error creando tablas contables: %s", e)
         raise
 
     finally:
@@ -338,7 +355,7 @@ def insertar_servicios_base():
 
     except Exception as e:
         conexion.rollback()
-        print("Error insertando servicios base:", e)
+        logger.error("Error insertando servicios base: %s", e)
         raise
 
     finally:
@@ -381,7 +398,7 @@ def generar_codigo():
             numero = 1
 
     except Exception as e:
-        print("Error generando código de venta:", e)
+        logger.error("Error generando código de venta: %s", e)
         numero = 1
 
     finally:
@@ -418,7 +435,7 @@ def enviar_telegram(mensaje):
                 print("Telegram error:", response.text)
 
         except Exception as e:
-            print("Error enviando mensaje a Telegram:", e)
+            logger.error("Error enviando mensaje a Telegram: %s", e)
 
     try:
         threading.Thread(
@@ -427,7 +444,7 @@ def enviar_telegram(mensaje):
             name="telegram_sender"
         ).start()
     except Exception as e:
-        print("Error creando thread de Telegram:", e)
+        logger.error("Error creando thread de Telegram: %s", e)
         
 
 # ======================================
@@ -463,7 +480,7 @@ def crear_indices():
         conexion.commit()
 
     except Exception as e:
-        print("Error creando índices:", e)
+        logger.error("Error creando índices: %s", e)
 
     finally:
         conexion.close()
@@ -533,7 +550,7 @@ def calcular_storage():
                         continue
 
     except Exception as e:
-        print("Error calculando storage:", e)
+        logger.error("Error calculando storage: %s", e)
         return _storage_cache["usado"], _storage_cache["disponible"]
 
     usado_mb = round(total_bytes / (1024 * 1024), 2)
@@ -638,7 +655,7 @@ Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
 
     except Exception as e:
         conexion.rollback()
-        print("Error revisando vencimientos:", e)
+        logger.error("Error revisando vencimientos: %s", e)
         raise
 
     finally:
@@ -681,7 +698,7 @@ def actualizar_estados():
 
     except Exception as e:
         conexion.rollback()
-        print("Error actualizando estados:", e)
+        logger.error("Error actualizando estados: %s", e)
         raise
 
     finally:
@@ -710,7 +727,7 @@ def login():
         return render_template("login.html")
 
     except Exception as e:
-        print("Error en login:", e)
+        logger.error("Error en login: %s", e)
         return render_template("login.html", error="Error interno del sistema")
 
 
@@ -723,7 +740,7 @@ def logout():
     try:
         session.clear()
     except Exception as e:
-        print("Error en logout:", e)
+        logger.error("Error en logout: %s", e)
 
     return redirect("/login")
 
@@ -753,12 +770,12 @@ def debug_telegram():
         )
 
         if response.status_code != 200:
-            print("Error Telegram:", response.text)
+            logger.error("Error Telegram: %s", response.text)
 
         return response.text
 
     except Exception as e:
-        print("Error enviando mensaje Telegram:", e)
+        logger.error("Error enviando mensaje Telegram: %s", e)
         return f"Error enviando mensaje: {e}"
 
 
@@ -778,7 +795,7 @@ def cron():
         return "Cron ejecutado correctamente"
 
     except Exception as e:
-        print("Error ejecutando cron:", e)
+        logger.error("Error ejecutando cron: %s", e)
         return f"Error en cron: {e}"
 
 
@@ -798,7 +815,7 @@ def cron_public():
         return "Cron ejecutado correctamente"
 
     except Exception as e:
-        print("Error ejecutando cron:", e)
+        logger.error("Error ejecutando cron: %s", e)
         return "Error ejecutando cron", 500
 
 
@@ -932,7 +949,7 @@ def index():
         )
 
     except Exception as e:
-        print("Error en dashboard:", e)
+        logger.error("Error en dashboard: %s", e)
         return "Error cargando el dashboard", 500
 
 
@@ -1041,7 +1058,7 @@ def agregar():
                     url_banco = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
                 except Exception as e:
-                    print("ERROR REAL STORAGE:", e)
+                    logger.error("ERROR REAL STORAGE: %s", e)
                     raise Exception(f"Error real en storage: {e}")
 
             else:
@@ -1113,7 +1130,7 @@ def agregar():
                 pass
 
             conexion.close()
-            print("Error al agregar cliente:", e)
+            logger.error("Error al agregar cliente: %s", e)
             return f"Error al agregar cliente: {e}"
 
     cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
@@ -1233,7 +1250,7 @@ def editar(codigo):
                 pass
 
             conexion.close()
-            print("Error al editar cliente:", e)
+            logger.error("Error al editar cliente: %s", e)
             return f"Error al editar cliente: {e}"
 
     cursor.execute(adaptar_query("""
@@ -1278,7 +1295,7 @@ def eliminar(codigo):
             pass
 
         conexion.close()
-        print("Error eliminando cliente:", e)
+        logger.error("Error eliminando cliente: %s", e)
         return f"Error al eliminar: {e}"
 
     conexion.close()
@@ -1383,7 +1400,7 @@ def renovar(codigo):
                 url_comprobante = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
             except Exception as e:
-                print("ERROR REAL STORAGE:", e)
+                logger.error("ERROR REAL STORAGE: %s", e)
                 raise Exception(f"Error real en storage: {e}")
 
         else:
@@ -1462,7 +1479,7 @@ def renovar(codigo):
             pass
 
         conexion.close()
-        print("Error en renovación:", e)
+        logger.error("Error en renovación: %s", e)
         return f"Error en renovación: {e}"
 
 
@@ -1501,7 +1518,7 @@ def contabilidad():
         datos = cursor.fetchall()
 
     except Exception as e:
-        print("Error cargando contabilidad:", e)
+        logger.error("Error cargando contabilidad: %s", e)
         conexion.close()
         return "Error cargando contabilidad", 500
 
@@ -1549,7 +1566,7 @@ def ver_archivo_local(archivo):
         return send_from_directory(ruta_base, archivo)
 
     except Exception as e:
-        print("Error sirviendo archivo local:", e)
+        logger.error("Error sirviendo archivo local: %s", e)
         return "Error accediendo al archivo", 500
 
 
@@ -1590,7 +1607,7 @@ def ventas_contables():
         datos = cursor.fetchall()
 
     except Exception as e:
-        print("Error cargando ventas contables:", e)
+        logger.error("Error cargando ventas contables: %s", e)
         conexion.close()
         return "Error cargando ventas contables", 500
 
@@ -1697,7 +1714,7 @@ def subir_archivo(tipo, identificador):
                     )
 
             except Exception as e:
-                print("Error eliminando archivo anterior:", e)
+                logger.error("Error eliminando archivo anterior: %s", e)
 
         if USANDO_SUPABASE:
 
@@ -1744,7 +1761,7 @@ def subir_archivo(tipo, identificador):
         return redirect(request.referrer or "/")
 
     except Exception as e:
-        print("Error subiendo archivo:")
+        logger.error("Error subiendo archivo: %s")
         print(traceback.format_exc())
         return f"Error subiendo archivo: {e}", 500
     
@@ -1786,7 +1803,7 @@ def optimizar_imagen(archivo):
             return buffer
 
     except Exception as e:
-        print("Error optimizando imagen:", e)
+        logger.error("Error optimizando imagen: %s", e)
         archivo.seek(0)
         return archivo
 
@@ -1822,7 +1839,7 @@ def pagos_terceros():
         datos = cursor.fetchall()
 
     except Exception as e:
-        print("Error cargando pagos terceros:", e)
+        logger.error("Error cargando pagos terceros: %s", e)
         conexion.close()
         return "Error cargando pagos terceros", 500
 
@@ -1858,7 +1875,7 @@ def listar_servicios():
         servicios = cursor.fetchall()
 
     except Exception as e:
-        print("Error cargando servicios:", e)
+        logger.error("Error cargando servicios: %s", e)
         conexion.close()
         return "Error cargando servicios", 500
 
@@ -1912,7 +1929,7 @@ def nuevo_servicio():
             except Exception:
                 pass
 
-            print("Error creando servicio:", e)
+            logger.error("Error creando servicio: %s", e)
             return f"Error creando servicio: {e}"
 
     return render_template("servicios/servicio_form.html", modo="nuevo")
@@ -1966,7 +1983,7 @@ def editar_servicio(id_servicio):
                 pass
 
             conexion.close()
-            print("Error editando servicio:", e)
+            logger.error("Error editando servicio: %s", e)
             return f"Error editando servicio: {e}"
 
     cursor.execute(adaptar_query("""
@@ -2029,7 +2046,7 @@ def eliminar_servicio(id_servicio):
             pass
 
         conexion.close()
-        print("Error eliminando servicio:", e)
+        logger.error("Error eliminando servicio: %s", e)
         return f"Error eliminando servicio: {e}"
 
 
@@ -2047,7 +2064,7 @@ def inicializar_base():
         print("Base de datos inicializada correctamente")
 
     except Exception as e:
-        print("Error inicializando base de datos:", e)
+        logger.error("Error inicializando base de datos: %s", e)
         raise
 
 
@@ -2065,5 +2082,5 @@ if __name__ == "__main__":
         app.run(debug=not es_postgres())
 
     except Exception as e:
-        print("Error iniciando aplicación:", e)
+        logger.error("Error iniciando aplicación: %s", e)
         raise
