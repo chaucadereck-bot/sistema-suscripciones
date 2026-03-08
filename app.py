@@ -343,7 +343,7 @@ def insertar_servicios_base():
 
 
 # ======================================
-# GENERAR CÓDIGO AUTOMÁTICO
+# GENERAR CÓDIGO AUTOMÁTICO (OPTIMIZADO)
 # ======================================
 def generar_codigo():
 
@@ -368,20 +368,21 @@ def generar_codigo():
 
         ultimo = cursor.fetchone()
 
+        if ultimo and ultimo[0]:
+            try:
+                partes = ultimo[0].split("-")
+                numero = int(partes[2]) + 1
+            except Exception:
+                numero = 1
+        else:
+            numero = 1
+
     except Exception as e:
         print("Error generando código de venta:", e)
-        ultimo = None
+        numero = 1
 
     finally:
         conexion.close()
-
-    if ultimo:
-        try:
-            numero = int(ultimo[0].split("-")[-2]) + 1
-        except Exception:
-            numero = 1
-    else:
-        numero = 1
 
     random_hex = secrets.token_hex(2)
 
@@ -389,7 +390,7 @@ def generar_codigo():
 
 
 # ======================================
-# TELEGRAM
+# TELEGRAM (OPTIMIZADO Y SEGURO)
 # ======================================
 def enviar_telegram(mensaje):
 
@@ -408,15 +409,22 @@ def enviar_telegram(mensaje):
 
     def _enviar():
         try:
-            http.post(url, data=payload, timeout=10)
+            response = http.post(url, data=payload, timeout=10)
+
+            if response.status_code != 200:
+                print("Telegram error:", response.text)
+
         except Exception as e:
             print("Error enviando mensaje a Telegram:", e)
 
-    threading.Thread(
-        target=_enviar,
-        daemon=True,
-        name="telegram_sender"
-    ).start()
+    try:
+        threading.Thread(
+            target=_enviar,
+            daemon=True,
+            name="telegram_sender"
+        ).start()
+    except Exception as e:
+        print("Error creando thread de Telegram:", e)
    
 
 # ======================================
@@ -429,7 +437,7 @@ _storage_cache = {
 }
 
 # ======================================
-# CALCULAR STORAGE USADO
+# CALCULAR STORAGE USADO (OPTIMIZADO)
 # ======================================
 def calcular_storage():
 
@@ -461,25 +469,26 @@ def calcular_storage():
         )
 
         if response.status_code != 200:
+            print("Supabase storage error:", response.text)
             return _storage_cache["usado"], _storage_cache["disponible"]
 
-        try:
-            archivos = response.json()
-        except Exception as e:
-            print("Error leyendo respuesta de Supabase Storage:", e)
+        archivos = response.json()
+
+        if not isinstance(archivos, list):
             return _storage_cache["usado"], _storage_cache["disponible"]
 
-        if isinstance(archivos, list):
+        for archivo in archivos:
 
-            for archivo in archivos:
+            metadata = archivo.get("metadata")
 
-                metadata = archivo.get("metadata")
+            if metadata:
+                size = metadata.get("size")
 
-                if metadata and "size" in metadata:
+                if size:
                     try:
-                        total_bytes += int(metadata["size"])
+                        total_bytes += int(size)
                     except Exception:
-                        pass
+                        continue
 
     except Exception as e:
         print("Error calculando storage:", e)
@@ -496,7 +505,7 @@ def calcular_storage():
 
 
 # ======================================
-# REVISIÓN AUTOMÁTICA PROFESIONAL
+# REVISIÓN AUTOMÁTICA PROFESIONAL (OPTIMIZADO)
 # ======================================
 def revisar_vencimientos():
 
@@ -520,9 +529,12 @@ def revisar_vencimientos():
                    COALESCE(notificado_vencido, FALSE)
             FROM ventas
             WHERE fecha_vencimiento <= ?
+            ORDER BY fecha_vencimiento ASC
         """), (limite,))
 
         registros = cursor.fetchall()
+
+        updates = []
 
         for r in registros:
 
@@ -556,27 +568,29 @@ Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
 
             if dias_restantes == 3 and not notif_3:
                 enviar_telegram("⚠ Faltan 3 días\n" + mensaje)
-                cursor.execute(adaptar_query("""
-                    UPDATE ventas SET notificado_3=? WHERE codigo_venta=?
-                """), (True, codigo))
+                updates.append(("notificado_3", codigo))
 
             elif dias_restantes == 2 and not notif_2:
                 enviar_telegram("⚠ Faltan 2 días\n" + mensaje)
-                cursor.execute(adaptar_query("""
-                    UPDATE ventas SET notificado_2=? WHERE codigo_venta=?
-                """), (True, codigo))
+                updates.append(("notificado_2", codigo))
 
             elif dias_restantes == 1 and not notif_1:
                 enviar_telegram("⚠ Vence mañana\n" + mensaje)
-                cursor.execute(adaptar_query("""
-                    UPDATE ventas SET notificado_1=? WHERE codigo_venta=?
-                """), (True, codigo))
+                updates.append(("notificado_1", codigo))
 
             elif dias_restantes < 0 and not notif_v:
                 enviar_telegram("❌ VENCIDO\n" + mensaje)
-                cursor.execute(adaptar_query("""
-                    UPDATE ventas SET notificado_vencido=? WHERE codigo_venta=?
-                """), (True, codigo))
+                updates.append(("notificado_vencido", codigo))
+
+        # ================================
+        # ACTUALIZACIONES EN BLOQUE
+        # ================================
+        for campo, codigo in updates:
+            cursor.execute(adaptar_query(f"""
+                UPDATE ventas
+                SET {campo}=?
+                WHERE codigo_venta=?
+            """), (True, codigo))
 
         conexion.commit()
 
@@ -590,7 +604,7 @@ Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
 
 
 # ======================================
-# ACTUALIZAR ESTADOS
+# ACTUALIZAR ESTADOS (OPTIMIZADO SQL)
 # ======================================
 def actualizar_estados():
 
@@ -601,33 +615,25 @@ def actualizar_estados():
 
         hoy = datetime.today().date()
 
-        cursor.execute("SELECT codigo_venta, fecha_vencimiento, estado FROM ventas")
-        registros = cursor.fetchall()
+        # ================================
+        # ACTIVAR SUSCRIPCIONES
+        # ================================
+        cursor.execute(adaptar_query("""
+            UPDATE ventas
+            SET estado='activo'
+            WHERE fecha_vencimiento >= ?
+              AND estado <> 'activo'
+        """), (hoy,))
 
-        for r in registros:
-
-            codigo = r[0]
-            fecha_v = r[1]
-            estado_actual = r[2]
-
-            if not fecha_v:
-                continue
-
-            # Aseguramos que fecha sea tipo date
-            if isinstance(fecha_v, str):
-                try:
-                    fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
-                except Exception:
-                    continue
-
-            nuevo_estado = "vencido" if hoy > fecha_v else "activo"
-
-            if nuevo_estado != estado_actual:
-                cursor.execute(adaptar_query("""
-                    UPDATE ventas
-                    SET estado=?
-                    WHERE codigo_venta=?
-                """), (nuevo_estado, codigo))
+        # ================================
+        # MARCAR VENCIDOS
+        # ================================
+        cursor.execute(adaptar_query("""
+            UPDATE ventas
+            SET estado='vencido'
+            WHERE fecha_vencimiento < ?
+              AND estado <> 'vencido'
+        """), (hoy,))
 
         conexion.commit()
 
@@ -641,7 +647,7 @@ def actualizar_estados():
 
 
 # ======================================
-# LOGIN
+# LOGIN (OPTIMIZADO)
 # ======================================
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -653,7 +659,7 @@ def login():
             usuario = request.form.get("usuario", "").strip()
             password = request.form.get("password", "").strip()
 
-            if usuario == USUARIO and password == PASSWORD:
+            if usuario and password and usuario == USUARIO and password == PASSWORD:
                 session["usuario"] = usuario
                 return redirect("/")
 
@@ -770,10 +776,12 @@ def index():
         conexion = obtener_conexion()
         cursor = conexion.cursor()
 
+        hoy = datetime.today().date()
+
         # ================================
-        # CLIENTES
+        # CLIENTES + ALERTAS (OPTIMIZADO)
         # ================================
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
             SELECT 
                 codigo_venta,
                 fecha,
@@ -787,11 +795,9 @@ def index():
                 estado
             FROM ventas
             ORDER BY fecha_vencimiento ASC
-        """)
+        """))
 
         datos = cursor.fetchall()
-
-        hoy = datetime.today().date()
 
         activos = 0
         vencidos = 0
@@ -801,18 +807,16 @@ def index():
 
         for d in datos:
 
-            fecha_v_raw = d[3]
+            fecha_v = d[3]
 
-            if not fecha_v_raw:
+            if not fecha_v:
                 continue
 
-            if isinstance(fecha_v_raw, str):
+            if isinstance(fecha_v, str):
                 try:
-                    fecha_v = datetime.strptime(fecha_v_raw[:10], "%Y-%m-%d").date()
+                    fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
                 except Exception:
                     continue
-            else:
-                fecha_v = fecha_v_raw
 
             dias_restantes = (fecha_v - hoy).days
 
@@ -884,7 +888,7 @@ def index():
 
 
 # ======================================
-# AGREGAR CLIENTE
+# AGREGAR CLIENTE (OPTIMIZADO)
 # ======================================
 @app.route("/agregar", methods=["GET", "POST"])
 @login_required
@@ -896,7 +900,7 @@ def agregar():
     if request.method == "POST":
         try:
 
-            codigo_venta = request.form["codigo_venta"].strip()
+            codigo_venta = request.form.get("codigo_venta", "").strip()
 
             cursor.execute(adaptar_query("""
                 SELECT 1 FROM ventas WHERE codigo_venta=?
@@ -906,7 +910,7 @@ def agregar():
                 conexion.close()
                 return "El código de venta ya existe"
 
-            fecha_input = request.form["fecha"]
+            fecha_input = request.form.get("fecha", "").strip()
 
             if "/" in fecha_input:
                 fecha_obj = datetime.strptime(fecha_input, "%d/%m/%Y")
@@ -915,16 +919,15 @@ def agregar():
 
             fecha = fecha_obj.strftime("%Y-%m-%d")
 
-            cliente = request.form["cliente"].strip()
-            telefono = request.form["telefono"].strip()
-            id_servicio = request.form["servicio"]
-            correo_cuenta = request.form["correo_cuenta"].strip()
+            cliente = request.form.get("cliente", "").strip()
+            telefono = request.form.get("telefono", "").strip()
+            id_servicio = request.form.get("servicio")
+            correo_cuenta = request.form.get("correo_cuenta", "").strip()
 
             proveedor_select = request.form.get("proveedor_select")
             proveedor_nuevo = request.form.get("proveedor_nuevo")
 
             comprobante = request.files.get("comprobante_banco")
-            nota = request.files.get("nota_venta")
 
             if not comprobante or comprobante.filename.strip() == "":
                 conexion.close()
@@ -960,7 +963,6 @@ def agregar():
             nombre_banco = f"{codigo_venta}_banco_{filename}"
 
             url_banco = None
-            url_nota = None
 
             if USANDO_SUPABASE:
 
@@ -1087,7 +1089,7 @@ def agregar():
 
 
 # ======================================
-# EDITAR CLIENTE
+# EDITAR CLIENTE (OPTIMIZADO)
 # ======================================
 @app.route("/editar/<codigo>", methods=["GET", "POST"])
 def editar(codigo):
@@ -1098,7 +1100,6 @@ def editar(codigo):
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    # Cargar servicios para el select
     cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
     servicios = cursor.fetchall()
 
@@ -1106,12 +1107,11 @@ def editar(codigo):
 
         try:
 
-            id_servicio = request.form["servicio"]
-            fecha_input = request.form["fecha"]
+            id_servicio = request.form.get("servicio")
+            fecha_input = request.form.get("fecha", "").strip()
 
             fecha_obj = datetime.strptime(fecha_input, "%Y-%m-%d")
 
-            # Obtener datos actualizados del servicio
             cursor.execute(adaptar_query("""
                 SELECT precio_base, costo_base, duracion_meses
                 FROM servicios
@@ -1131,9 +1131,6 @@ def editar(codigo):
             fecha_vencimiento = fecha_obj + relativedelta(months=duracion)
             utilidad = precio_base - costo_base
 
-            # ================================
-            # ACTUALIZAR VENTAS
-            # ================================
             cursor.execute(adaptar_query("""
                 UPDATE ventas SET
                     fecha=?,
@@ -1150,18 +1147,15 @@ def editar(codigo):
                 fecha_input,
                 duracion,
                 fecha_vencimiento.strftime("%Y-%m-%d"),
-                request.form["cliente"].strip(),
-                request.form["telefono"].strip(),
+                request.form.get("cliente", "").strip(),
+                request.form.get("telefono", "").strip(),
                 id_servicio,
                 precio_base,
-                request.form["correo_cuenta"].strip(),
+                request.form.get("correo_cuenta", "").strip(),
                 "activo",
                 codigo
             ))
 
-            # ================================
-            # ACTUALIZAR ÚLTIMO REGISTRO CONTABLE
-            # ================================
             cursor.execute(adaptar_query("""
                 UPDATE ventas_contables
                 SET id_servicio=?,
@@ -1192,9 +1186,6 @@ def editar(codigo):
             print("Error al editar cliente:", e)
             return f"Error al editar cliente: {e}"
 
-    # ================================
-    # GET → Cargar datos actuales
-    # ================================
     cursor.execute(adaptar_query("""
         SELECT *
         FROM ventas
@@ -1246,7 +1237,7 @@ def eliminar(codigo):
 
 
 # ======================================
-# RENOVAR CLIENTE
+# RENOVAR CLIENTE (OPTIMIZADO)
 # ======================================
 @app.route("/renovar/<codigo>", methods=["GET", "POST"])
 def renovar(codigo):
@@ -1257,9 +1248,6 @@ def renovar(codigo):
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    # ================================
-    # OBTENER DATOS ACTUALES
-    # ================================
     cursor.execute(adaptar_query("""
         SELECT cliente, servicio, fecha_vencimiento, duracion_meses
         FROM ventas
@@ -1274,9 +1262,6 @@ def renovar(codigo):
 
     cliente, id_servicio, fecha_v, meses = venta
 
-    # ================================
-    # GET → FORMULARIO
-    # ================================
     if request.method == "GET":
 
         cursor.execute("""
@@ -1296,9 +1281,6 @@ def renovar(codigo):
             proveedores=proveedores
         )
 
-    # ================================
-    # POST → PROCESAR RENOVACIÓN
-    # ================================
     try:
 
         proveedor_select = request.form.get("proveedor_select")
@@ -1315,16 +1297,12 @@ def renovar(codigo):
         else:
             proveedor_final = proveedor_select
 
-        # Calcular nueva fecha vencimiento
         if isinstance(fecha_v, str):
             fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
 
         nueva_fecha = fecha_v + relativedelta(months=int(meses))
         hoy = datetime.today().strftime("%Y-%m-%d")
 
-        # ================================
-        # GUARDAR ARCHIVO (STORAGE)
-        # ================================
         filename = secure_filename(comprobante.filename)
         nombre_archivo = f"{codigo}_{int(time.time())}_{filename}"
 
@@ -1365,9 +1343,6 @@ def renovar(codigo):
             comprobante.save(ruta_local)
             url_comprobante = "/" + ruta_local
 
-        # ================================
-        # ACTUALIZAR FECHA Y RESET NOTIFICACIONES
-        # ================================
         cursor.execute(adaptar_query("""
             UPDATE ventas
             SET fecha_vencimiento=?,
@@ -1383,9 +1358,6 @@ def renovar(codigo):
             codigo
         ))
 
-        # ================================
-        # OBTENER DATOS SERVICIO
-        # ================================
         cursor.execute(adaptar_query("""
             SELECT precio_base, costo_base
             FROM servicios
@@ -1395,9 +1367,6 @@ def renovar(codigo):
         precio_base, costo_base = cursor.fetchone()
         utilidad = precio_base - costo_base
 
-        # ================================
-        # INSERTAR NUEVO MOVIMIENTO CONTABLE
-        # ================================
         id_contable = f"{codigo}-{int(time.time())}"
 
         cursor.execute(adaptar_query("""
@@ -1415,9 +1384,6 @@ def renovar(codigo):
             utilidad
         ))
 
-        # ================================
-        # INSERTAR PAGO TERCERO
-        # ================================
         id_pago = f"PAG-{id_contable}"
 
         cursor.execute(adaptar_query("""
@@ -1538,7 +1504,7 @@ def ver_archivo_local(archivo):
 
 
 # ======================================
-# VENTAS CONTABLES (MODELO 1:N PROFESIONAL)
+# VENTAS CONTABLES (OPTIMIZADO)
 # ======================================
 @app.route("/ventas_contables")
 def ventas_contables():
@@ -1561,8 +1527,8 @@ def ventas_contables():
             vc.precio_venta,
             vc.costo_base,
             vc.utilidad,
-            vc.nota_venta,
-            vc.comprobante_banco
+            COALESCE(vc.nota_venta, ''),
+            COALESCE(vc.comprobante_banco, '')
         FROM ventas_contables vc
         JOIN ventas v
             ON vc.codigo_venta = v.codigo_venta
@@ -1584,7 +1550,7 @@ def ventas_contables():
 
 
 # ======================================
-# SUBIR ARCHIVOS (VENTAS CONTABLES Y PAGOS)
+# SUBIR ARCHIVOS 
 # ======================================
 @app.route("/subir_archivo/<tipo>/<identificador>", methods=["POST"])
 def subir_archivo(tipo, identificador):
@@ -2018,7 +1984,7 @@ def eliminar_servicio(id_servicio):
 
 
 # ======================================
-# INICIALIZACIÓN DE BASE
+# INICIALIZACIÓN DE BASE (OPTIMIZADO)
 # ======================================
 def inicializar_base():
 
@@ -2026,6 +1992,7 @@ def inicializar_base():
         crear_tabla()
         crear_tablas_contables()
         insertar_servicios_base()
+        print("Base de datos inicializada correctamente")
 
     except Exception as e:
         print("Error inicializando base de datos:", e)
