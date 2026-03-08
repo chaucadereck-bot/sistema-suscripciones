@@ -416,6 +416,45 @@ def enviar_telegram(mensaje):
         ).start()
     except Exception as e:
         print("Error creando thread de Telegram:", e)
+        
+
+# ======================================
+# CREAR ÍNDICES DE BASE DE DATOS
+# ======================================
+def crear_indices():
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    try:
+
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ventas_fecha_vencimiento
+        ON ventas (fecha_vencimiento)
+        """)
+
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ventas_codigo
+        ON ventas (codigo_venta)
+        """)
+
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ventas_contables_codigo
+        ON ventas_contables (codigo_venta)
+        """)
+
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pagos_contable
+        ON pagos_terceros (id_contable)
+        """)
+
+        conexion.commit()
+
+    except Exception as e:
+        print("Error creando índices:", e)
+
+    finally:
+        conexion.close()
    
 
 # ======================================
@@ -1983,6 +2022,8 @@ def inicializar_base():
         crear_tabla()
         crear_tablas_contables()
         insertar_servicios_base()
+        crear_indices()
+
         print("Base de datos inicializada correctamente")
 
     except Exception as e:
