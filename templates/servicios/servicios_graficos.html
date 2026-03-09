@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Gráficas de Servicios{% endblock %}
+{% block header %}Análisis de Servicios{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+<!-- HEADER -->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<h5 class="mb-0 fw-semibold">
+Dashboard de Servicios
+</h5>
+
+<a href="/servicios" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-arrow-left"></i>
+Volver a servicios
+</a>
+
+</div>
+
+<!-- KPI METRICS -->
+
+<div class="row g-4 mb-4">
+
+<div class="col-md-4">
+
+<div class="card metric-card h-100">
+<div class="card-body">
+
+<div class="metric-title">
+Servicios distintos
+</div>
+
+<div class="metric-value text-primary">
+{{ labels|length }}
+</div>
+
+<div class="metric-subtitle">
+servicios vendidos
+</div>
+
+</div>
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card metric-card h-100">
+<div class="card-body">
+
+<div class="metric-title">
+Ventas totales
+</div>
+
+<div class="metric-value text-success">
+{{ valores|sum }}
+</div>
+
+<div class="metric-subtitle">
+licencias vendidas
+</div>
+
+</div>
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="card metric-card h-100">
+<div class="card-body">
+
+<div class="metric-title">
+Servicio líder
+</div>
+
+<div class="metric-value text-dark">
+{{ labels[0] if labels else "—" }}
+</div>
+
+<div class="metric-subtitle">
+más vendido
+</div>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+<!-- GRÁFICOS -->
+
+<div class="row g-4">
+
+<!-- GRÁFICO PRINCIPAL -->
+
+<div class="col-xl-7">
+
+<div class="card h-100">
+
+<div class="card-header">
+
+<div class="fw-semibold">
+Distribución de Ventas por Servicio
+</div>
+
+<small class="text-muted">
+proporción de ventas entre servicios digitales
+</small>
+
+</div>
+
+<div class="card-body">
+
+{% if valores|length == 0 %}
+
+<div class="chart-empty">
+Sin datos de servicios disponibles aún
+</div>
+
+{% else %}
+
+<div class="chart-container chart-lg">
+
+<canvas
+id="graficoServicios"
+data-labels='{{ labels | tojson }}'
+data-valores='{{ valores | tojson }}'> </canvas>
+
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+<!-- GRÁFICO SECUNDARIO -->
+
+<div class="col-xl-5">
+
+<div class="card h-100">
+
+<div class="card-header">
+
+<div class="fw-semibold">
+Servicios Más Vendidos
+</div>
+
+<small class="text-muted">
+ranking de popularidad de servicios
+</small>
+
+</div>
+
+<div class="card-body">
+
+{% if valores|length == 0 %}
+
+<div class="chart-empty">
+Sin datos de servicios disponibles aún
+</div>
+
+{% else %}
+
+<div class="chart-container chart-md">
+
+<canvas id="graficoServiciosTop"></canvas>
+
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

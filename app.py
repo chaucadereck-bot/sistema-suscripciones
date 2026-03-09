@@ -1546,6 +1546,93 @@ def contabilidad():
         total_utilidad=round(total_utilidad, 2)
     )
 
+
+# ======================================
+# GRAFICOS CONTABILIDAD
+# ======================================
+@app.route("/contabilidad_graficos")
+@login_required
+def contabilidad_graficos():
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    try:
+
+        cursor.execute(adaptar_query("""
+            SELECT COALESCE(SUM(precio_venta),0)
+            FROM ventas_contables
+        """))
+        ingresos = float(cursor.fetchone()[0] or 0)
+
+        cursor.execute(adaptar_query("""
+            SELECT COALESCE(SUM(monto_usdt),0)
+            FROM pagos_terceros
+        """))
+        pagos = float(cursor.fetchone()[0] or 0)
+
+        utilidad = ingresos - pagos
+
+    except Exception as e:
+        logger.error("Error generando gráficos contables: %s", e)
+        ingresos = 0
+        pagos = 0
+        utilidad = 0
+
+    finally:
+        conexion.close()
+
+    return render_template(
+        "contabilidad/contabilidad_graficos.html",
+        ingresos=round(ingresos, 2),
+        pagos=round(pagos, 2),
+        utilidad=round(utilidad, 2)
+    )
+
+
+# ======================================
+# GRAFICOS SERVICIOS
+# ======================================
+@app.route("/servicios_graficos")
+@login_required
+def servicios_graficos():
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    try:
+
+        cursor.execute(adaptar_query("""
+            SELECT 
+                s.nombre_servicio,
+                COUNT(vc.id_servicio) as total
+            FROM ventas_contables vc
+            JOIN servicios s
+                ON vc.id_servicio = s.id_servicio
+            GROUP BY s.nombre_servicio
+            ORDER BY total DESC
+        """))
+
+        datos = cursor.fetchall()
+
+        labels = [fila[0] for fila in datos]
+        valores = [int(fila[1]) for fila in datos]
+
+    except Exception as e:
+        logger.error("Error generando gráficos de servicios: %s", e)
+        labels = []
+        valores = []
+
+    finally:
+        conexion.close()
+
+    return render_template(
+        "servicios/servicios_graficos.html",
+        labels=labels,
+        valores=valores
+    )
+    
+
 # ======================================
 # VER ARCHIVOS LOCALES (SOLO SQLITE)
 # ======================================

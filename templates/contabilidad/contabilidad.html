@@ -5,25 +5,19 @@
 
 {% block content %}
 
-<!-- MÉTRICAS FINANCIERAS -->
-
 <div class="row g-4 mb-4">
 
 <div class="col-xl-4 col-md-6">
-
 <div class="card metric-card h-100">
 <div class="card-body">
 
 <div class="metric-header">
-
 <div class="metric-title">
 Total Ingresos
 </div>
-
 <div class="metric-icon">
 <i class="bi bi-cash-stack"></i>
 </div>
-
 </div>
 
 <div class="metric-value text-success">
@@ -32,25 +26,20 @@ $ {{ total_ingresos }}
 
 </div>
 </div>
-
 </div>
 
 
 <div class="col-xl-4 col-md-6">
-
 <div class="card metric-card h-100">
 <div class="card-body">
 
 <div class="metric-header">
-
 <div class="metric-title">
 Pagos a Terceros
 </div>
-
 <div class="metric-icon">
 <i class="bi bi-credit-card"></i>
 </div>
-
 </div>
 
 <div class="metric-value text-danger">
@@ -59,25 +48,20 @@ $ {{ total_pagos }}
 
 </div>
 </div>
-
 </div>
 
 
 <div class="col-xl-4 col-md-6">
-
 <div class="card metric-card h-100">
 <div class="card-body">
 
 <div class="metric-header">
-
 <div class="metric-title">
 Utilidad Total
 </div>
-
 <div class="metric-icon">
 <i class="bi bi-graph-up-arrow"></i>
 </div>
-
 </div>
 
 <div class="metric-value text-primary">
@@ -86,14 +70,34 @@ $ {{ total_utilidad }}
 
 </div>
 </div>
-
 </div>
 
 </div>
 
 
+<div class="card mb-4">
 
-<!-- TABLA CONTABLE -->
+<div class="card-body d-flex justify-content-between align-items-center">
+
+<div>
+<div class="fw-semibold">
+Visualización de datos financieros
+</div>
+
+<div class="text-muted small">
+Ver análisis gráfico de ingresos, pagos y utilidades
+</div>
+</div>
+
+<a href="{{ url_for('contabilidad_graficos') }}" class="btn btn-primary">
+<i class="bi bi-bar-chart-line"></i>
+Ver Gráficas
+</a>
+
+</div>
+
+</div>
+
 
 <div class="card table-card">
 
@@ -134,21 +138,10 @@ Movimientos financieros registrados en el sistema
 
 <tr>
 
-<td class="fw-semibold">
-{{ d[0] }}
-</td>
-
-<td>
-{{ d[1] }}
-</td>
-
-<td>
-{{ d[2] }}
-</td>
-
-<td>
-{{ d[3] }}
-</td>
+<td class="fw-semibold">{{ d[0] }}</td>
+<td>{{ d[1] }}</td>
+<td>{{ d[2] }}</td>
+<td>{{ d[3] }}</td>
 
 <td class="text-end text-success fw-semibold">
 $ {{ d[4] }}

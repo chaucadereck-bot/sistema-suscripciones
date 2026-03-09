@@ -5,6 +5,32 @@
 
 {% block content %}
 
+<div class="card mb-4">
+
+<div class="card-body d-flex justify-content-between align-items-center">
+
+<div>
+
+<div class="fw-semibold">
+Análisis de ventas por servicio
+</div>
+
+<div class="text-muted small">
+Visualiza gráficas de servicios más vendidos y distribución de ventas
+</div>
+
+</div>
+
+<a href="{{ url_for('servicios_graficos') }}" class="btn btn-primary">
+<i class="bi bi-bar-chart-line"></i>
+Ver Gráficas
+</a>
+
+</div>
+
+</div>
+
+
 <div class="card table-card">
 
 <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -13,11 +39,9 @@
 Catálogo de Servicios
 </div>
 
-<a href="/servicios/nuevo" class="btn btn-primary btn-sm">
-
+<a href="{{ url_for('nuevo_servicio') }}" class="btn btn-primary btn-sm">
 <i class="bi bi-plus-lg"></i>
 Nuevo Servicio
-
 </a>
 
 </div>
@@ -47,13 +71,8 @@ Nuevo Servicio
 
 <tr>
 
-<td class="fw-semibold">
-{{ s[0] }}
-</td>
-
-<td>
-{{ s[1] }}
-</td>
+<td class="fw-semibold">{{ s[0] }}</td>
+<td>{{ s[1] }}</td>
 
 <td class="text-end text-success fw-semibold">
 $ {{ s[2] }}
@@ -71,14 +90,12 @@ $ {{ s[3] }}
 
 <div class="d-flex justify-content-end flex-wrap gap-2">
 
-<a href="/servicios/editar/{{ s[0] }}" class="btn btn-primary btn-sm">
-
+<a href="{{ url_for('editar_servicio', id_servicio=s[0]) }}" class="btn btn-primary btn-sm">
 <i class="bi bi-pencil"></i>
 Editar
-
 </a>
 
-<a href="/servicios/eliminar/{{ s[0] }}"
+<a href="{{ url_for('eliminar_servicio', id_servicio=s[0]) }}"
 class="btn btn-danger btn-sm"
 onclick="return confirm('⚠️ ¿Eliminar este servicio?')">
 

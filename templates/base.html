@@ -24,7 +24,6 @@
 
 <div class="layout">
 
-<!-- SIDEBAR -->
 <aside class="sidebar">
 
 <div class="sidebar-header">
@@ -58,14 +57,14 @@ Gestión de Licencias
 <span class="menu-text">Pagos a Terceros</span>
 </a>
 
-<a href="/contabilidad" class="sidebar-link {% if '/contabilidad' in request.path %}active{% endif %}">
+<a href="/contabilidad" class="sidebar-link {% if request.path.startswith('/contabilidad') %}active{% endif %}">
 <span class="menu-icon">
 <i class="bi bi-bar-chart-line"></i>
 </span>
 <span class="menu-text">Registro Contable</span>
 </a>
 
-<a href="/servicios" class="sidebar-link {% if '/servicios' in request.path %}active{% endif %}">
+<a href="/servicios" class="sidebar-link {% if request.path.startswith('/servicios') %}active{% endif %}">
 <span class="menu-icon">
 <i class="bi bi-box-seam"></i>
 </span>
@@ -86,7 +85,6 @@ Gestión de Licencias
 </aside>
 
 
-<!-- MAIN -->
 <div class="main">
 
 <header class="topbar">
@@ -142,7 +140,6 @@ Administrador
 
 {% else %}
 
-<!-- LOGIN -->
 <div class="login-wrapper">
 
 <div class="login-container">
@@ -155,7 +152,15 @@ Administrador
 
 {% endif %}
 
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+
+{% block extra_js %}{% endblock %}
 
 </body>
 

@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Gráficas Contables{% endblock %}
+{% block header %}Análisis Financiero{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+<!-- HEADER -->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+<h5 class="mb-0 fw-semibold">Dashboard financiero</h5>
+
+<a href="/contabilidad" class="btn btn-outline-secondary btn-sm">
+<i class="bi bi-arrow-left"></i>
+Volver al registro contable
+</a>
+
+</div>
+
+<!-- MÉTRICAS PRINCIPALES -->
+
+<div class="row g-4 mb-4">
+
+<div class="col-xl-4 col-md-6">
+<div class="card metric-card h-100">
+<div class="card-body">
+
+<div class="metric-header">
+<div class="metric-title">Ingresos Totales</div>
+
+<div class="metric-icon">
+<i class="bi bi-cash-stack"></i>
+</div>
+</div>
+
+<div class="metric-value text-success">
+$ {{ ingresos }}
+</div>
+
+<div class="metric-subtitle">
+ventas registradas en el sistema
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="col-xl-4 col-md-6">
+<div class="card metric-card h-100">
+<div class="card-body">
+
+<div class="metric-header">
+<div class="metric-title">Pagos a Terceros</div>
+
+<div class="metric-icon">
+<i class="bi bi-credit-card"></i>
+</div>
+</div>
+
+<div class="metric-value text-danger">
+$ {{ pagos }}
+</div>
+
+<div class="metric-subtitle">
+costos operativos registrados
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="col-xl-4 col-md-6">
+<div class="card metric-card h-100">
+<div class="card-body">
+
+<div class="metric-header">
+<div class="metric-title">Utilidad</div>
+
+<div class="metric-icon">
+<i class="bi bi-graph-up-arrow"></i>
+</div>
+</div>
+
+<div class="metric-value text-primary">
+$ {{ utilidad }}
+</div>
+
+<div class="metric-subtitle">
+beneficio neto del sistema
+</div>
+
+</div>
+</div>
+</div>
+
+</div>
+
+<!-- GRÁFICOS -->
+
+<div class="row g-4">
+
+<!-- GRÁFICO PRINCIPAL -->
+
+<div class="col-xl-7">
+
+<div class="card h-100">
+
+<div class="card-header">
+
+<div class="fw-semibold">
+Ingresos vs Pagos vs Utilidad
+</div>
+
+<small class="text-muted">
+comparativa financiera general
+</small>
+
+</div>
+
+<div class="card-body">
+
+{% if ingresos == 0 and pagos == 0 %}
+
+<div class="chart-empty">
+Sin datos financieros disponibles aún
+</div>
+
+{% else %}
+
+<div class="chart-container chart-lg">
+
+<canvas
+id="graficoFinanzas"
+data-ingresos="{{ ingresos }}"
+data-pagos="{{ pagos }}"
+data-utilidad="{{ utilidad }}"> </canvas>
+
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+<!-- GRÁFICO SECUNDARIO -->
+
+<div class="col-xl-5">
+
+<div class="card h-100">
+
+<div class="card-header">
+
+<div class="fw-semibold">
+Distribución Financiera
+</div>
+
+<small class="text-muted">
+proporción entre ingresos y pagos
+</small>
+
+</div>
+
+<div class="card-body">
+
+{% if ingresos == 0 and pagos == 0 %}
+
+<div class="chart-empty">
+Sin datos financieros disponibles aún
+</div>
+
+{% else %}
+
+<div class="chart-container chart-md">
+
+<canvas id="graficoDistribucion"></canvas>
+
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

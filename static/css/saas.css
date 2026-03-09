@@ -5293,54 +5293,84 @@ BLOQUE 24 - ACTION GROUP SaaS
 ================================ */
 
 .action-group{
-
 display:flex;
-
 align-items:center;
-
 gap:10px;
-
 flex-wrap:wrap;
-
 }
-
 
 /* ACTION BUTTON */
 
 .action-btn{
-
 min-width:110px;
-
 display:inline-flex;
-
 align-items:center;
 justify-content:center;
-
 font-weight:500;
-
 gap:6px;
-
 white-space:nowrap;
-
 }
-
 
 /* RESPONSIVE */
 
 @media (max-width:768px){
 
 .action-group{
-
 width:100%;
-
 }
 
 .action-btn{
-
 flex:1;
-
 min-width:auto;
+}
 
+}
+
+
+/* ================================
+BLOQUE 25 - METRIC CARD INTERACTION
+================================ */
+
+.metric-card{
+transition:all .25s ease;
+}
+
+.metric-card:hover{
+transform:translateY(-3px);
+box-shadow:0 8px 20px rgba(0,0,0,0.06);
+}
+
+
+/* ================================
+BLOQUE 26 - CHART LOAD ANIMATION
+================================ */
+
+.chart-container{
+position:relative;
+height:320px;
+animation:chartFade .6s ease;
+}
+
+/* tamaños para dashboards analíticos */
+
+.chart-lg{
+height:420px;
+}
+
+.chart-md{
+height:340px;
+}
+
+@keyframes chartFade{
+
+from{
+opacity:0;
+transform:translateY(10px);
+}
+
+to{
+opacity:1;
+transform:translateY(0);
 }
 
 }
