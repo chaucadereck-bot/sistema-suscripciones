@@ -17,6 +17,7 @@ import io
 from werkzeug.utils import secure_filename
 from functools import wraps
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 
 # ======================================
@@ -40,6 +41,12 @@ def login_required(f):
             return redirect("/login")
         return f(*args, **kwargs)
     return decorated_function
+
+
+# ======================================
+# THREADPOOL WORKER (BACKGROUND TASKS)
+# ======================================
+telegram_executor = ThreadPoolExecutor(max_workers=2)
 
 
 # ======================================
@@ -74,6 +81,15 @@ app = Flask(__name__)
 
 # Activar compresión gzip
 Compress(app)
+
+
+# ======================================
+# CACHE HTTP NAVEGADOR
+# ======================================
+@app.after_request
+def add_cache_headers(response):
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return response
 
 
 # ======================================
@@ -453,7 +469,7 @@ def generar_codigo():
 
 
 # ======================================
-# TELEGRAM (OPTIMIZADO Y SEGURO)
+# TELEGRAM (WORKER THREADPOOL - MÁS ESCALABLE)
 # ======================================
 def enviar_telegram(mensaje):
 
@@ -470,28 +486,30 @@ def enviar_telegram(mensaje):
         "text": mensaje
     }
 
+    # ======================================
+    # FUNCIÓN INTERNA DE ENVÍO
+    # ======================================
     def _enviar():
         try:
             response = http.post(url, data=payload, timeout=10)
 
             if response.status_code != 200:
-                print("Telegram error:", response.text)
+                logger.error("Telegram error: %s", response.text)
 
         except Exception as e:
             logger.error("Error enviando mensaje a Telegram: %s", e)
 
+    # ======================================
+    # EJECUCIÓN EN BACKGROUND
+    # ======================================
     try:
-        threading.Thread(
-            target=_enviar,
-            daemon=True,
-            name="telegram_sender"
-        ).start()
+        telegram_executor.submit(_enviar)
     except Exception as e:
-        logger.error("Error creando thread de Telegram: %s", e)
+        logger.error("Error enviando tarea Telegram al executor: %s", e)
         
 
 # ======================================
-# CREAR ÍNDICES DE BASE DE DATOS
+# CREAR ÍNDICES DE BASE DE DATOS (OPTIMIZADO)
 # ======================================
 def crear_indices():
 
@@ -500,24 +518,50 @@ def crear_indices():
 
     try:
 
+        # Índice para búsquedas por fecha de vencimiento (dashboard / alertas)
         cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ventas_fecha_vencimiento
         ON ventas (fecha_vencimiento)
         """)
 
+        # Índice para búsquedas por código de venta
         cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ventas_codigo
         ON ventas (codigo_venta)
         """)
 
+        # Índice para consultas contables por código
         cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ventas_contables_codigo
         ON ventas_contables (codigo_venta)
         """)
 
+        # Índice para pagos de terceros
         cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_pagos_contable
         ON pagos_terceros (id_contable)
+        """)
+
+        # ======================================
+        # NUEVOS ÍNDICES PARA ESCALABILIDAD
+        # ======================================
+
+        # Índice para filtros por estado (activo / vencido)
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ventas_estado
+        ON ventas (estado)
+        """)
+
+        # Índice para consultas por servicio
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ventas_servicio
+        ON ventas (servicio)
+        """)
+
+        # Índice para consultas contables por fecha
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ventas_contables_fecha
+        ON ventas_contables (fecha)
         """)
 
         conexion.commit()
@@ -624,9 +668,21 @@ def calcular_storage():
 
 
 # ======================================
-# REVISIÓN AUTOMÁTICA PROFESIONAL (OPTIMIZADO)
+# REVISIÓN AUTOMÁTICA PROFESIONAL (WORKER BACKGROUND)
 # ======================================
 def revisar_vencimientos():
+
+    # Ejecutar la revisión en background (no bloquea Flask)
+    try:
+        telegram_executor.submit(_revisar_vencimientos_worker)
+    except Exception as e:
+        logger.error("Error enviando tarea revisar_vencimientos al executor: %s", e)
+
+
+# ======================================
+# WORKER INTERNO DE REVISIÓN
+# ======================================
+def _revisar_vencimientos_worker():
 
     from datetime import datetime, timedelta
 
@@ -701,9 +757,9 @@ Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
                 enviar_telegram("❌ VENCIDO\n" + mensaje)
                 updates.append(("notificado_vencido", codigo))
 
-        # ================================
+        # ======================================
         # ACTUALIZACIONES EN BLOQUE
-        # ================================
+        # ======================================
         for campo, codigo in updates:
             cursor.execute(adaptar_query(f"""
                 UPDATE ventas
@@ -716,7 +772,6 @@ Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
     except Exception as e:
         conexion.rollback()
         logger.error("Error revisando vencimientos: %s", e)
-        raise
 
     finally:
         conexion.close()
