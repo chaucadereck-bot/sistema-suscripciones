@@ -80,22 +80,6 @@ else:
     print("Supabase no configurado")
 
 
-# ======================================
-# CONFIGURACIÓN DE SEGURIDAD
-# ======================================
-
-app.secret_key = os.getenv("SECRET_KEY")
-
-if not app.secret_key:
-    # Fallback seguro si no existe SECRET_KEY
-    app.secret_key = secrets.token_hex(32)
-
-app.config.update(
-    SESSION_COOKIE_SECURE=bool(os.getenv("DATABASE_URL")),
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax"
-)
-
 ALERTA_DIAS = 3
 USUARIO = os.getenv("APP_USER")
 PASSWORD = os.getenv("APP_PASSWORD")
@@ -136,6 +120,9 @@ def obtener_conexion():
 
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
 
             return conn
 
@@ -484,7 +471,7 @@ def crear_indices():
 
     finally:
         conexion.close()
-   
+
 
 # ======================================
 # CACHE STORAGE
@@ -824,7 +811,25 @@ def cron_public():
 # ======================================
 @app.route("/health")
 def health():
-    return {"status": "ok", "service": "saas-licencias"}
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("SELECT 1")
+        conexion.close()
+
+        return {
+            "status": "ok",
+            "service": "saas-licencias",
+            "database": "connected"
+        }
+
+    except Exception as e:
+        logger.error("Health check error: %s", e)
+
+        return {
+            "status": "error",
+            "database": "disconnected"
+        }, 500
 
 
 # ======================================
