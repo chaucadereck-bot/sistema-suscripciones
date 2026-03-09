@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, send_from_directory
+from flask import Flask, render_template, request, redirect, session, send_from_directory, g
 from flask_compress import Compress
 import os
 import secrets
@@ -89,10 +89,24 @@ if not USUARIO or not PASSWORD:
 
 
 # ======================================
-# CONEXIÓN AUTOMÁTICA (LOCAL / RAILWAY / RENDER)
+# CONEXIÓN AUTOMÁTICA (LOCAL / RENDER)
 # ======================================
-
 def obtener_conexion():
+
+    # Reutilizar conexión existente en la request
+    if "db_conn" in g:
+        conn = g.db_conn
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            return conn
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            g.pop("db_conn", None)
 
     database_url = os.getenv("DATABASE_URL")
 
@@ -108,7 +122,6 @@ def obtener_conexion():
             )
 
             conn.autocommit = True
-            return conn
 
         else:
 
@@ -120,19 +133,33 @@ def obtener_conexion():
 
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA foreign_keys = ON")
-            conn.execute("PRAGMA foreign_keys = ON")
             conn.execute("PRAGMA journal_mode = WAL")
             conn.execute("PRAGMA synchronous = NORMAL")
 
-            return conn
+        g.db_conn = conn
+        return conn
 
     except Exception as e:
         logger.error("Error conectando a la base de datos: %s", e)
         raise
 
 
-print("DATABASE_URL RAW:")
-print(repr(os.getenv("DATABASE_URL")))
+logger.info("DATABASE_URL detectado: %s", bool(os.getenv("DATABASE_URL")))
+
+
+# ======================================
+# CIERRE AUTOMÁTICO DE CONEXIÓN DB
+# ======================================
+@app.teardown_appcontext
+def cerrar_conexion(exception=None):
+
+    conn = g.pop("db_conn", None)
+
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception as e:
+            logger.error("Error cerrando conexión DB: %s", e)
 
 
 # ======================================
@@ -483,6 +510,23 @@ _storage_cache = {
 }
 
 # ======================================
+# CACHE DASHBOARD (TTL 30s)
+# ======================================
+_dashboard_cache = {
+    "data": None,
+    "timestamp": 0
+}
+
+# ======================================
+# INVALIDAR CACHE DASHBOARD
+# ======================================
+def limpiar_cache_dashboard():
+    global _dashboard_cache
+    _dashboard_cache["data"] = None
+    _dashboard_cache["timestamp"] = 0
+
+
+# ======================================
 # CALCULAR STORAGE USADO (OPTIMIZADO)
 # ======================================
 def calcular_storage():
@@ -515,7 +559,7 @@ def calcular_storage():
         )
 
         if response.status_code != 200:
-            print("Supabase storage error:", response.text)
+            logger.error("Supabase storage error: %s", response.text)
             return _storage_cache["usado"], _storage_cache["disponible"]
 
         archivos = response.json()
@@ -843,6 +887,14 @@ def index():
 
     try:
 
+        # ================================
+        # CACHE DASHBOARD (30s)
+        # ================================
+        global _dashboard_cache
+
+        if time.time() - _dashboard_cache["timestamp"] < 30 and _dashboard_cache["data"]:
+            return render_template("dashboard/index.html", **_dashboard_cache["data"])
+
         actualizar_estados()
 
         conexion = obtener_conexion()
@@ -851,7 +903,23 @@ def index():
         hoy = datetime.today().date()
 
         # ================================
-        # CLIENTES + ALERTAS (OPTIMIZADO)
+        # CONTADORES PRINCIPALES (OPTIMIZADO SQL)
+        # ================================
+        cursor.execute(adaptar_query("""
+            SELECT
+                SUM(CASE WHEN estado='activo' THEN 1 ELSE 0 END),
+                SUM(CASE WHEN estado='vencido' THEN 1 ELSE 0 END)
+            FROM ventas
+        """))
+
+        totales = cursor.fetchone()
+
+        activos = int(totales[0] or 0)
+        vencidos = int(totales[1] or 0)
+        por_vencer = 0
+
+        # ================================
+        # CLIENTES + ALERTAS
         # ================================
         cursor.execute(adaptar_query("""
             SELECT 
@@ -867,13 +935,10 @@ def index():
                 estado
             FROM ventas
             ORDER BY fecha_vencimiento ASC
+            LIMIT 200
         """))
 
         datos = cursor.fetchall()
-
-        activos = 0
-        vencidos = 0
-        por_vencer = 0
 
         datos_con_alerta = []
 
@@ -894,7 +959,6 @@ def index():
 
             if d[9] == "vencido":
                 alerta = "vencido"
-                vencidos += 1
 
             elif 0 <= dias_restantes <= ALERTA_DIAS:
                 alerta = "por_vencer"
@@ -902,7 +966,6 @@ def index():
 
             else:
                 alerta = "activo"
-                activos += 1
 
             datos_con_alerta.append((d, alerta))
 
@@ -940,17 +1003,30 @@ def index():
 
         conexion.close()
 
+        # ================================
+        # CONTEXTO DASHBOARD
+        # ================================
+        contexto = {
+            "datos": datos_con_alerta,
+            "total_activos": activos,
+            "total_vencidos": vencidos,
+            "total_por_vencer": por_vencer,
+            "usado_storage": usado_mb,
+            "disponible_storage": disponible_mb,
+            "total_ingresos": round(total_ingresos, 2),
+            "total_pagos": round(total_pagos, 2),
+            "total_utilidad": round(total_utilidad, 2)
+        }
+
+        # ================================
+        # GUARDAR CACHE
+        # ================================
+        _dashboard_cache["data"] = contexto
+        _dashboard_cache["timestamp"] = time.time()
+
         return render_template(
             "dashboard/index.html",
-            datos=datos_con_alerta,
-            total_activos=activos,
-            total_vencidos=vencidos,
-            total_por_vencer=por_vencer,
-            usado_storage=usado_mb,
-            disponible_storage=disponible_mb,
-            total_ingresos=round(total_ingresos, 2),
-            total_pagos=round(total_pagos, 2),
-            total_utilidad=round(total_utilidad, 2)
+            **contexto
         )
 
     except Exception as e:
@@ -1124,6 +1200,7 @@ def agregar():
             ))
 
             conexion.commit()
+            limpiar_cache_dashboard()
             conexion.close()
 
             return redirect("/ventas_contables")
@@ -1244,6 +1321,7 @@ def editar(codigo):
             ))
 
             conexion.commit()
+            limpiar_cache_dashboard()
             conexion.close()
 
             return redirect("/")
@@ -1303,6 +1381,7 @@ def eliminar(codigo):
         logger.error("Error eliminando cliente: %s", e)
         return f"Error al eliminar: {e}"
 
+    limpiar_cache_dashboard()
     conexion.close()
 
     return redirect("/")
@@ -1473,6 +1552,7 @@ def renovar(codigo):
         ))
 
         conexion.commit()
+        limpiar_cache_dashboard()
         conexion.close()
 
         return redirect("/")
@@ -1853,7 +1933,7 @@ def subir_archivo(tipo, identificador):
         return redirect(request.referrer or "/")
 
     except Exception as e:
-        logger.error("Error subiendo archivo: %s")
+        logger.error("Error subiendo archivo: %s", e)
         print(traceback.format_exc())
         return f"Error subiendo archivo: {e}", 500
     
