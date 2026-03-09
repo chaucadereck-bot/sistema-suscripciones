@@ -7,6 +7,8 @@ from dateutil.relativedelta import relativedelta
 import sqlite3
 import psycopg2
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import threading
 import time
 import traceback
@@ -14,7 +16,6 @@ from PIL import Image
 import io
 from werkzeug.utils import secure_filename
 from functools import wraps
-import traceback
 import logging
 
 
@@ -29,6 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# ======================================
+# DECORADOR LOGIN REQUIRED
+# ======================================
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -38,21 +42,43 @@ def login_required(f):
     return decorated_function
 
 
-# Sesión HTTP reutilizable (mejor rendimiento en múltiples requests)
+# ======================================
+# SESIÓN HTTP OPTIMIZADA (POOL + RETRIES)
+# ======================================
 http = requests.Session()
+
+retries = Retry(
+    total=3,
+    backoff_factor=0.5,
+    status_forcelist=[500, 502, 503, 504]
+)
+
+adapter = HTTPAdapter(
+    max_retries=retries,
+    pool_connections=10,
+    pool_maxsize=10
+)
+
+http.mount("http://", adapter)
+http.mount("https://", adapter)
+
 http.headers.update({
     "User-Agent": "SaaS-Licencias/1.0"
 })
 
+
+# ======================================
+# INICIALIZACIÓN APP FLASK
+# ======================================
 app = Flask(__name__)
 
 # Activar compresión gzip
 Compress(app)
 
+
 # ======================================
 # CONFIGURACIÓN DE SESIONES
 # ======================================
-
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
 
 app.config.update(
@@ -65,22 +91,25 @@ app.config.update(
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
 
-# ==========================
+# ======================================
 # CONFIGURACIÓN SUPABASE
-# ==========================
-
+# ======================================
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
 
 USANDO_SUPABASE = bool(SUPABASE_URL and SUPABASE_KEY)
 
 if USANDO_SUPABASE:
-    print("Supabase configurado correctamente")
+    logger.info("Supabase configurado correctamente")
 else:
-    print("Supabase no configurado")
+    logger.info("Supabase no configurado")
 
 
+# ======================================
+# VARIABLES DEL SISTEMA
+# ======================================
 ALERTA_DIAS = 3
+
 USUARIO = os.getenv("APP_USER")
 PASSWORD = os.getenv("APP_PASSWORD")
 
@@ -880,10 +909,8 @@ def health():
 # PANEL PRINCIPAL (DASHBOARD)
 # ======================================
 @app.route("/")
+@login_required
 def index():
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     try:
 
@@ -1241,10 +1268,8 @@ def agregar():
 # EDITAR CLIENTE (OPTIMIZADO)
 # ======================================
 @app.route("/editar/<codigo>", methods=["GET", "POST"])
+@login_required
 def editar(codigo):
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -1352,10 +1377,8 @@ def editar(codigo):
 # ELIMINAR CLIENTE
 # ======================================
 @app.route("/eliminar/<codigo>")
+@login_required
 def eliminar(codigo):
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -1391,10 +1414,8 @@ def eliminar(codigo):
 # RENOVAR CLIENTE (OPTIMIZADO)
 # ======================================
 @app.route("/renovar/<codigo>", methods=["GET", "POST"])
+@login_required
 def renovar(codigo):
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -1572,10 +1593,8 @@ def renovar(codigo):
 # CONTABILIDAD (MODELO 1:N DEFINITIVO)
 # ======================================
 @app.route("/contabilidad")
+@login_required
 def contabilidad():
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -1722,10 +1741,8 @@ def servicios_graficos():
 # VER ARCHIVOS LOCALES (SOLO SQLITE)
 # ======================================
 @app.route("/uploads/<path:archivo>")
+@login_required
 def ver_archivo_local(archivo):
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     try:
 
@@ -1746,10 +1763,8 @@ def ver_archivo_local(archivo):
 # VENTAS CONTABLES (OPTIMIZADO)
 # ======================================
 @app.route("/ventas_contables")
+@login_required
 def ventas_contables():
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -1792,10 +1807,8 @@ def ventas_contables():
 # SUBIR ARCHIVOS 
 # ======================================
 @app.route("/subir_archivo/<tipo>/<identificador>", methods=["POST"])
+@login_required
 def subir_archivo(tipo, identificador):
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     archivo = request.files.get("archivo")
 
@@ -1984,10 +1997,8 @@ def optimizar_imagen(archivo):
 # PAGOS TERCEROS (MODELO 1:N DEFINITIVO)
 # ======================================
 @app.route("/pagos_terceros")
+@login_required
 def pagos_terceros():
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -2024,10 +2035,8 @@ def pagos_terceros():
 # GESTIÓN DE SERVICIOS (SaaS Profesional)
 # ======================================
 @app.route("/servicios")
+@login_required
 def listar_servicios():
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -2060,10 +2069,8 @@ def listar_servicios():
 # NUEVO SERVICIO
 # ======================================
 @app.route("/servicios/nuevo", methods=["GET", "POST"])
+@login_required
 def nuevo_servicio():
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     if request.method == "POST":
 
@@ -2111,10 +2118,8 @@ def nuevo_servicio():
 # EDITAR SERVICIO
 # ======================================
 @app.route("/servicios/editar/<id_servicio>", methods=["GET", "POST"])
+@login_required
 def editar_servicio(id_servicio):
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -2178,10 +2183,8 @@ def editar_servicio(id_servicio):
 # ELIMINAR SERVICIO (CON VALIDACIÓN)
 # ======================================
 @app.route("/servicios/eliminar/<id_servicio>")
+@login_required
 def eliminar_servicio(id_servicio):
-
-    if "usuario" not in session:
-        return redirect("/login")
 
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -2241,7 +2244,8 @@ def inicializar_base():
 
 
 # Ejecutar siempre al iniciar (local o nube)
-inicializar_base()
+with app.app_context():
+    inicializar_base()
 
 
 # ======================================
