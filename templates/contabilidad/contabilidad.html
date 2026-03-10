@@ -5,93 +5,115 @@
 
 {% block content %}
 
-<div class="row g-4 mb-4">
+<div class="dashboard-section">
 
-<div class="col-xl-4 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+<!-- MÉTRICAS -->
+
+<div class="metrics-row">
+
+<div class="metric-card">
 
 <div class="metric-header">
+
 <div class="metric-title">
 Total Ingresos
 </div>
+
 <div class="metric-icon">
 <i class="bi bi-cash-stack"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-success">
 $ {{ total_ingresos }}
 </div>
 
+<div class="metric-sub">
+Ingresos generados por ventas registradas
 </div>
-</div>
+
 </div>
 
 
-<div class="col-xl-4 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+<div class="metric-card">
 
 <div class="metric-header">
+
 <div class="metric-title">
 Pagos a Terceros
 </div>
+
 <div class="metric-icon">
 <i class="bi bi-credit-card"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-danger">
 $ {{ total_pagos }}
 </div>
 
+<div class="metric-sub">
+Pagos realizados a proveedores
 </div>
-</div>
+
 </div>
 
 
-<div class="col-xl-4 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+<div class="metric-card">
 
 <div class="metric-header">
+
 <div class="metric-title">
 Utilidad Total
 </div>
+
 <div class="metric-icon">
 <i class="bi bi-graph-up-arrow"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-primary">
 $ {{ total_utilidad }}
 </div>
 
+<div class="metric-sub">
+Beneficio neto generado
 </div>
-</div>
+
 </div>
 
 </div>
 
 
-<div class="card mb-4">
 
-<div class="card-body d-flex justify-content-between align-items-center">
+<!-- TARJETA DE ACCIÓN -->
+
+<div class="content-card">
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
 
 <div>
+
 <div class="fw-semibold">
 Visualización de datos financieros
 </div>
 
 <div class="text-muted small">
-Ver análisis gráfico de ingresos, pagos y utilidades
-</div>
+Analiza ingresos, pagos y utilidades mediante gráficos
 </div>
 
-<a href="{{ url_for('contabilidad_graficos') }}" class="btn btn-primary">
+</div>
+
+<a href="{{ url_for('contabilidad_graficos') }}" class="btn btn-primary btn-sm">
+
 <i class="bi bi-bar-chart-line"></i>
 Ver Gráficas
+
 </a>
 
 </div>
@@ -99,25 +121,33 @@ Ver Gráficas
 </div>
 
 
-<div class="card table-card">
 
-<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+<!-- TABLA -->
+
+<div class="table-card">
+
+<div class="table-header">
+
+<div>
 
 <div class="table-title">
 Historial Contable
 </div>
 
-<div class="table-sub text-muted small">
+<div class="table-meta">
 Movimientos financieros registrados en el sistema
 </div>
 
 </div>
 
+</div>
+
+
 <div class="table-responsive">
 
-<table class="table table-hover table-sm align-middle mb-0">
+<table class="table align-middle mb-0">
 
-<thead class="table-light">
+<thead>
 
 <tr>
 <th>ID</th>
@@ -139,8 +169,11 @@ Movimientos financieros registrados en el sistema
 <tr>
 
 <td class="fw-semibold">{{ d[0] }}</td>
+
 <td>{{ d[1] }}</td>
+
 <td>{{ d[2] }}</td>
+
 <td>{{ d[3] }}</td>
 
 <td class="text-end text-success fw-semibold">
@@ -166,6 +199,8 @@ $ {{ d[7] }}
 </tbody>
 
 </table>
+
+</div>
 
 </div>
 

@@ -1,21 +1,45 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
+
+    if (typeof Chart === "undefined") {
+        console.warn("Chart.js no está cargado");
+        return;
+    }
 
     // =========================
-    // CONFIGURACIÓN GLOBAL
+    // CONFIG GLOBAL
     // =========================
 
-    Chart.defaults.font.family = "Inter";
+    Chart.defaults.font.family = "Inter, system-ui, -apple-system, sans-serif";
     Chart.defaults.color = "#6b7280";
+    Chart.defaults.plugins.tooltip.backgroundColor = "#111827";
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.displayColors = false;
 
-    const palette = {
-        blue: "#2563eb",
-        green: "#22c55e",
-        red: "#ef4444",
-        yellow: "#f59e0b",
-        purple: "#a855f7",
-        teal: "#14b8a6",
-        grid: "#e5e7eb"
-    };
+    const palette = [
+        "#2563eb",
+        "#22c55e",
+        "#f59e0b",
+        "#ef4444",
+        "#a855f7",
+        "#14b8a6"
+    ];
+
+    const gridColor = "#e5e7eb";
+
+
+    // =========================
+    // FUNCION GENERICA
+    // =========================
+
+    function createChart(canvas, config) {
+
+        if (!canvas) return null;
+
+        const ctx = canvas.getContext("2d");
+
+        return new Chart(ctx, config);
+
+    }
 
 
     // =========================
@@ -23,7 +47,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // =========================
 
     const finanzasCanvas = document.getElementById("graficoFinanzas");
-    const distribucionCanvas = document.getElementById("graficoDistribucion");
 
     if (finanzasCanvas) {
 
@@ -31,28 +54,24 @@ document.addEventListener("DOMContentLoaded", function () {
         const pagos = Number(finanzasCanvas.dataset.pagos || 0);
         const utilidad = Number(finanzasCanvas.dataset.utilidad || 0);
 
-        if (ingresos === 0 && pagos === 0 && utilidad === 0) {
-            console.warn("No hay datos financieros para graficar");
-        } else {
+        if (ingresos || pagos || utilidad) {
 
-            const ctx = finanzasCanvas.getContext("2d");
-
-            new Chart(ctx, {
+            createChart(finanzasCanvas, {
 
                 type: "bar",
 
                 data: {
                     labels: ["Ingresos", "Pagos", "Utilidad"],
                     datasets: [{
-                        label: "USD",
                         data: [ingresos, pagos, utilidad],
                         backgroundColor: [
-                            palette.green,
-                            palette.red,
-                            palette.blue
+                            palette[1],
+                            palette[3],
+                            palette[0]
                         ],
                         borderRadius: 8,
-                        borderSkipped: false
+                        borderSkipped: false,
+                        maxBarThickness: 60
                     }]
                 },
 
@@ -61,43 +80,21 @@ document.addEventListener("DOMContentLoaded", function () {
                     responsive: true,
                     maintainAspectRatio: false,
 
-                    layout: {
-                        padding: 10
-                    },
+                    animation: { duration: 800 },
 
                     plugins: {
-
-                        legend: {
-                            display: false
-                        },
-
-                        tooltip: {
-                            backgroundColor: "#111827",
-                            padding: 12,
-                            cornerRadius: 6,
-                            displayColors: false
-                        }
-
-                    },
-
-                    animation: {
-                        duration: 900,
-                        easing: "easeOutQuart"
+                        legend: { display: false }
                     },
 
                     scales: {
 
                         y: {
-                            grid: {
-                                color: palette.grid
-                            },
-                            beginAtZero: true
+                            beginAtZero: true,
+                            grid: { color: gridColor }
                         },
 
                         x: {
-                            grid: {
-                                display: false
-                            }
+                            grid: { display: false }
                         }
 
                     }
@@ -106,58 +103,70 @@ document.addEventListener("DOMContentLoaded", function () {
 
             });
 
+        }
 
-            // =========================
-            // DISTRIBUCIÓN
-            // =========================
+    }
 
-            if (distribucionCanvas) {
 
-                const ctx2 = distribucionCanvas.getContext("2d");
 
-                new Chart(ctx2, {
+    // =========================
+    // DISTRIBUCION FINANCIERA
+    // =========================
 
-                    type: "doughnut",
+    const distribucionCanvas = document.getElementById("graficoDistribucion");
 
-                    data: {
-                        labels: ["Pagos", "Utilidad"],
-                        datasets: [{
-                            data: [pagos, utilidad],
-                            backgroundColor: [
-                                palette.red,
-                                palette.blue
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
+    if (distribucionCanvas) {
 
-                    options: {
+        const ingresos = Number(distribucionCanvas.dataset.ingresos || 0);
+        const pagos = Number(distribucionCanvas.dataset.pagos || 0);
+        const utilidad = Number(distribucionCanvas.dataset.utilidad || 0);
 
-                        responsive: true,
-                        maintainAspectRatio: false,
+        if (pagos || utilidad) {
 
-                        cutout: "65%",
+            createChart(distribucionCanvas, {
 
-                        plugins: {
+                type: "doughnut",
 
-                            legend: {
-                                position: "bottom",
-                                labels: {
-                                    padding: 20
-                                }
+                data: {
+
+                    labels: ["Pagos", "Utilidad"],
+
+                    datasets: [{
+                        data: [pagos, utilidad],
+                        backgroundColor: [
+                            palette[3],
+                            palette[0]
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 8
+                    }]
+
+                },
+
+                options: {
+
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    cutout: "70%",
+
+                    plugins: {
+
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                boxWidth: 12,
+                                padding: 16
                             }
-
-                        },
-
-                        animation: {
-                            duration: 900
                         }
 
-                    }
+                    },
 
-                });
+                    animation: { duration: 800 }
 
-            }
+                }
+
+            });
 
         }
 
@@ -170,7 +179,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // =========================
 
     const serviciosCanvas = document.getElementById("graficoServicios");
-    const serviciosTopCanvas = document.getElementById("graficoServiciosTop");
 
     if (serviciosCanvas) {
 
@@ -182,98 +190,27 @@ document.addEventListener("DOMContentLoaded", function () {
             labels = JSON.parse(serviciosCanvas.dataset.labels || "[]");
             valores = JSON.parse(serviciosCanvas.dataset.valores || "[]");
 
-        } catch (error) {
+        } catch (err) {
 
-            console.error("Error leyendo datos de servicios:", error);
+            console.error("Error leyendo datos de servicios");
 
         }
 
-        if (labels.length === 0) {
-            console.warn("No hay datos de servicios para graficar");
-            return;
-        }
+        if (labels.length) {
 
-        const ctx3 = serviciosCanvas.getContext("2d");
+            createChart(serviciosCanvas, {
 
-        new Chart(ctx3, {
-
-            type: "doughnut",
-
-            data: {
-
-                labels: labels,
-
-                datasets: [{
-                    data: valores,
-                    backgroundColor: [
-                        palette.blue,
-                        palette.green,
-                        palette.yellow,
-                        palette.red,
-                        palette.purple,
-                        palette.teal
-                    ],
-                    borderWidth: 0
-                }]
-
-            },
-
-            options: {
-
-                responsive: true,
-                maintainAspectRatio: false,
-
-                cutout: "65%",
-
-                plugins: {
-
-                    legend: {
-                        position: "bottom",
-                        labels: {
-                            padding: 20
-                        }
-                    },
-
-                    tooltip: {
-                        backgroundColor: "#111827",
-                        padding: 12,
-                        cornerRadius: 6
-                    }
-
-                },
-
-                animation: {
-                    duration: 900
-                }
-
-            }
-
-        });
-
-
-
-        // =========================
-        // TOP SERVICIOS
-        // =========================
-
-        if (serviciosTopCanvas) {
-
-            const ctx4 = serviciosTopCanvas.getContext("2d");
-
-            new Chart(ctx4, {
-
-                type: "bar",
+                type: "doughnut",
 
                 data: {
 
-                    labels: labels,
+                    labels,
 
                     datasets: [{
-                        label: "Ventas",
                         data: valores,
-                        backgroundColor: palette.blue,
-                        borderRadius: 8,
-                        borderSkipped: false
+                        backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                        borderWidth: 0,
+                        hoverOffset: 8
                     }]
 
                 },
@@ -283,36 +220,94 @@ document.addEventListener("DOMContentLoaded", function () {
                     responsive: true,
                     maintainAspectRatio: false,
 
+                    cutout: "70%",
+
                     plugins: {
 
                         legend: {
-                            display: false
-                        },
-
-                        tooltip: {
-                            backgroundColor: "#111827",
-                            padding: 12
+                            position: "bottom",
+                            labels: {
+                                boxWidth: 12,
+                                padding: 16
+                            }
                         }
 
                     },
 
-                    animation: {
-                        duration: 900
+                    animation: { duration: 800 }
+
+                }
+
+            });
+
+        }
+
+    }
+
+
+
+    // =========================
+    // TOP SERVICIOS
+    // =========================
+
+    const serviciosTopCanvas = document.getElementById("graficoServiciosTop");
+
+    if (serviciosTopCanvas) {
+
+        let labels = [];
+        let valores = [];
+
+        try {
+
+            labels = JSON.parse(serviciosTopCanvas.dataset.labels || "[]");
+            valores = JSON.parse(serviciosTopCanvas.dataset.valores || "[]");
+
+        } catch (err) {
+
+            console.error("Error leyendo top servicios");
+
+        }
+
+        if (labels.length) {
+
+            createChart(serviciosTopCanvas, {
+
+                type: "bar",
+
+                data: {
+
+                    labels,
+
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: palette[0],
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        maxBarThickness: 50
+                    }]
+
+                },
+
+                options: {
+
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    animation: { duration: 800 },
+
+                    plugins: {
+                        legend: { display: false }
                     },
 
                     scales: {
 
                         y: {
-                            grid: {
-                                color: palette.grid
-                            },
-                            beginAtZero: true
+                            beginAtZero: true,
+                            grid: { color: gridColor }
                         },
 
                         x: {
-                            grid: {
-                                display: false
-                            }
+                            grid: { display: false }
                         }
 
                     }

@@ -5,20 +5,19 @@
 
 {% block content %}
 
-<div class="card form-card">
+<div class="dashboard-section">
+
+<div class="form-card">
 
 <div class="card-header">
 
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-
-<div class="form-title">
+<div class="card-header-title">
+<i class="bi bi-person-plus me-2"></i>
 Registro de Nuevo Cliente
 </div>
 
 <div class="text-muted small">
 Completa los datos del cliente
-</div>
-
 </div>
 
 </div>
@@ -30,52 +29,69 @@ Completa los datos del cliente
 
 <!-- INFORMACIÓN DEL CLIENTE -->
 
-<div class="section-title mb-3">
-<i class="bi bi-person-plus me-2"></i>
+<div class="section-title">
+<i class="bi bi-person me-2"></i>
 Información del Cliente
 </div>
 
-<div class="row g-4">
+<div class="form-row">
 
-<div class="col-xl-3 col-md-4">
+<div>
+
 <label class="form-label">Código Venta</label>
+
 <input
 type="text"
 name="codigo_venta"
 class="form-control"
 value="{{ codigo }}"
 readonly>
+
 </div>
 
-<div class="col-xl-3 col-md-4">
+
+<div>
+
 <label class="form-label">Fecha de Registro</label>
+
 <input
 type="date"
 name="fecha"
 class="form-control"
 required>
+
 </div>
 
-<div class="col-xl-6 col-md-12">
+
+<div>
+
 <label class="form-label">Nombre del Cliente</label>
+
 <input
 type="text"
 name="cliente"
 class="form-control"
 placeholder="Ej: Juan Pérez"
 required>
+
 </div>
 
-<div class="col-xl-4 col-md-6">
+
+<div>
+
 <label class="form-label">Teléfono</label>
+
 <input
 type="text"
 name="telefono"
 class="form-control"
 placeholder="Número de contacto">
+
 </div>
 
-<div class="col-xl-4 col-md-6">
+
+<div>
+
 <label class="form-label">Servicio contratado</label>
 
 <select name="servicio" class="form-select" required>
@@ -88,16 +104,21 @@ placeholder="Número de contacto">
 
 </div>
 
-<div class="col-xl-4 col-md-12">
+
+<div>
+
 <label class="form-label">Correo de la cuenta</label>
+
 <input
 type="email"
 name="correo_cuenta"
 class="form-control"
 placeholder="correo@ejemplo.com">
+
 </div>
 
 </div>
+
 
 
 <hr class="my-4">
@@ -105,14 +126,16 @@ placeholder="correo@ejemplo.com">
 
 <!-- PROVEEDOR -->
 
-<div class="section-title mb-3">
+<div class="section-title">
+
 <i class="bi bi-building me-2"></i>
 Proveedor del Servicio
+
 </div>
 
-<div class="row g-4">
+<div class="form-row">
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Proveedor existente
@@ -134,7 +157,8 @@ Seleccionar proveedor
 
 </div>
 
-<div class="col-md-6">
+
+<div>
 
 <label class="form-label">
 Nuevo proveedor
@@ -151,19 +175,22 @@ placeholder="Si no existe, escribe el proveedor">
 </div>
 
 
+
 <hr class="my-4">
 
 
 <!-- DOCUMENTOS -->
 
-<div class="section-title mb-3">
+<div class="section-title">
+
 <i class="bi bi-folder2-open me-2"></i>
 Documentos de la Venta
+
 </div>
 
-<div class="row g-4">
+<div class="form-row">
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Comprobante Bancario
@@ -181,7 +208,8 @@ Formatos permitidos: JPG o PDF
 
 </div>
 
-<div class="col-md-6">
+
+<div>
 
 <label class="form-label">
 Nota de Venta (opcional)
@@ -201,20 +229,19 @@ Documento adicional de la venta
 </div>
 
 
-<!-- BOTONES -->
 
-<div class="form-actions mt-4 d-flex flex-wrap gap-2">
+<div class="form-actions mt-4">
 
 <button type="submit" class="btn btn-primary">
 
-<i class="bi bi-check-lg me-1"></i>
+<i class="bi bi-check-lg"></i>
 Guardar Cliente
 
 </button>
 
-<a href="/" class="btn btn-outline-secondary">
+<a href="/clientes" class="btn btn-outline-secondary">
 
-<i class="bi bi-arrow-left me-1"></i>
+<i class="bi bi-arrow-left"></i>
 Cancelar
 
 </a>
@@ -222,6 +249,8 @@ Cancelar
 </div>
 
 </form>
+
+</div>
 
 </div>
 

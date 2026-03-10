@@ -1,26 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Clientes{% endblock %}
-{% block header %}Registro de Clientes{% endblock %}
+{% block title %}Dashboard{% endblock %}
+{% block header %}Panel de Control{% endblock %}
 
 {% block content %}
 
+<!-- ==============================
+ALERTAS
+============================== -->
+
 {% if total_vencidos > 0 or total_por_vencer > 0 %}
 
-<div class="alert-panel mb-4">
+<div class="content-card">
+
+<div class="section-header">
+
+<div class="section-title">
+Alertas del Sistema
+</div>
+
+</div>
+
+<div class="dashboard-grid">
 
 {% if total_vencidos > 0 %}
-<div class="alert-item alert-danger">
+<div class="alert alert-danger">
 
-<div class="alert-icon">
 <i class="bi bi-exclamation-triangle"></i>
-</div>
 
-<div class="alert-text">
 <strong>{{ total_vencidos }}</strong> cliente(s) vencido(s)
-</div>
 
-<a href="/" class="alert-action">
+<a href="/clientes?vencidos=1" class="btn btn-sm btn-danger ms-2">
 Ver clientes
 </a>
 
@@ -28,17 +38,13 @@ Ver clientes
 {% endif %}
 
 {% if total_por_vencer > 0 %}
-<div class="alert-item alert-warning">
+<div class="alert alert-warning">
 
-<div class="alert-icon">
 <i class="bi bi-hourglass-split"></i>
-</div>
 
-<div class="alert-text">
 <strong>{{ total_por_vencer }}</strong> cliente(s) por vencer
-</div>
 
-<a href="/" class="alert-action">
+<a href="/clientes?por_vencer=1" class="btn btn-sm btn-warning ms-2">
 Revisar
 </a>
 
@@ -47,21 +53,62 @@ Revisar
 
 </div>
 
+</div>
+
 {% endif %}
 
 
 
-<div class="row g-4 mb-4">
+<!-- ==============================
+RENOVACIONES
+============================== -->
 
-<div class="col-xl-3 col-lg-6 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+{% if total_vencidos + total_por_vencer > 0 %}
+
+<div class="content-card">
+
+<div class="section-header">
+
+<div class="section-title">
+Renovaciones Pendientes
+</div>
+
+</div>
+
+<div class="alert alert-warning">
+
+<i class="bi bi-arrow-repeat"></i>
+
+<strong>{{ total_vencidos + total_por_vencer }}</strong> clientes necesitan renovar sus servicios
+
+<a href="/clientes_renovar" class="btn btn-sm btn-warning ms-2">
+Ir al panel de renovaciones
+</a>
+
+</div>
+
+</div>
+
+{% endif %}
+
+
+
+<!-- ==============================
+MÉTRICAS
+============================== -->
+
+<div class="metrics-row">
+
+<div class="metric-card">
 
 <div class="metric-header">
+
 <div class="metric-title">Clientes Activos</div>
+
 <div class="metric-icon">
 <i class="bi bi-person-check"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-success">
@@ -69,19 +116,19 @@ Revisar
 </div>
 
 </div>
-</div>
-</div>
 
 
-<div class="col-xl-3 col-lg-6 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+<div class="metric-card">
 
 <div class="metric-header">
+
 <div class="metric-title">Por Vencer</div>
+
 <div class="metric-icon">
 <i class="bi bi-hourglass-split"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-warning">
@@ -89,19 +136,19 @@ Revisar
 </div>
 
 </div>
-</div>
-</div>
 
 
-<div class="col-xl-3 col-lg-6 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+<div class="metric-card">
 
 <div class="metric-header">
+
 <div class="metric-title">Vencidos</div>
+
 <div class="metric-icon">
 <i class="bi bi-exclamation-triangle"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-danger">
@@ -109,19 +156,19 @@ Revisar
 </div>
 
 </div>
-</div>
-</div>
 
 
-<div class="col-xl-3 col-lg-6 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+<div class="metric-card">
 
 <div class="metric-header">
+
 <div class="metric-title">Storage Usado</div>
+
 <div class="metric-icon">
 <i class="bi bi-hdd"></i>
 </div>
+
 </div>
 
 <div class="metric-value">
@@ -153,37 +200,66 @@ Revisar
 </div>
 
 </div>
-</div>
-</div>
 
 </div>
 
 
 
-<div class="card table-card">
+<!-- ==============================
+TABLA CLIENTES
+============================== -->
 
-<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+<div class="table-card">
+
+<div class="table-header">
+
+<div>
 
 <div class="table-title">
 Listado de Clientes
 </div>
 
-<div class="action-group d-flex flex-wrap gap-2">
+<div class="table-meta">
+Clientes registrados en el sistema
+</div>
 
-<a href="{{ url_for('agregar') }}" class="btn btn-primary btn-sm action-btn">
+</div>
+
+
+<div class="table-toolbar-right">
+
+<div class="table-search">
+
+<span class="table-search-icon">
+<i class="bi bi-search"></i>
+</span>
+
+<input
+type="text"
+id="buscarCliente"
+placeholder="Buscar cliente, servicio, correo o código..."
+>
+
+</div>
+
+<div class="btn-group">
+
+<a href="{{ url_for('agregar') }}" class="btn btn-primary btn-sm">
 <i class="bi bi-plus-lg"></i>
 Cliente
 </a>
 
-<a href="{{ url_for('contabilidad_graficos') }}" class="btn btn-dark btn-sm action-btn">
+<a href="{{ url_for('contabilidad_graficos') }}" class="btn btn-secondary btn-sm">
 <i class="bi bi-bar-chart"></i>
 Contabilidad
 </a>
 
-<a href="{{ url_for('servicios_graficos') }}" class="btn btn-success btn-sm action-btn">
+<a href="{{ url_for('servicios_graficos') }}" class="btn btn-success btn-sm">
 <i class="bi bi-box-seam"></i>
 Servicios
 </a>
+
+</div>
 
 </div>
 
@@ -193,9 +269,9 @@ Servicios
 
 <div class="table-responsive">
 
-<table class="table table-hover table-sm align-middle mb-0">
+<table class="table align-middle mb-0">
 
-<thead class="table-light">
+<thead>
 
 <tr>
 <th>Código</th>
@@ -255,14 +331,14 @@ Activo
 
 <td class="text-end">
 
-<div class="d-flex justify-content-end flex-wrap gap-2">
+<div class="table-actions justify-content-end">
 
-<a href="{{ url_for('renovar', codigo=d[0]) }}" class="btn btn-warning btn-sm">
+<a href="{{ url_for('renovar', codigo=d[0]) }}" class="btn btn-outline-primary btn-sm">
 <i class="bi bi-arrow-repeat"></i>
 Renovar
 </a>
 
-<a href="{{ url_for('editar', codigo=d[0]) }}" class="btn btn-primary btn-sm">
+<a href="{{ url_for('editar', codigo=d[0]) }}" class="btn btn-secondary btn-sm">
 <i class="bi bi-pencil"></i>
 Editar
 </a>
@@ -291,5 +367,35 @@ Eliminar
 </div>
 
 </div>
+
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function(){
+
+const input = document.getElementById("buscarCliente");
+
+if(!input) return;
+
+input.addEventListener("keyup", function(){
+
+const filtro = input.value.toLowerCase();
+
+const filas = document.querySelectorAll(".table tbody tr");
+
+filas.forEach(function(fila){
+
+const texto = fila.textContent.toLowerCase();
+
+fila.style.display = texto.includes(filtro) ? "" : "none";
+
+});
+
+});
+
+});
+
+</script>
 
 {% endblock %}

@@ -4,22 +4,23 @@
 
 {% block login_content %}
 
-<div class="login-wrapper">
+<div class="login-card">
 
-<div class="login-card shadow-sm">
+<div class="login-header">
 
-<div class="login-header text-center">
-
-<div class="login-logo mb-3">
+<div class="login-brand">
+<span class="login-icon">
 <i class="bi bi-box-seam"></i>
+</span>
+Gestión de Licencias
 </div>
 
 <h3 class="login-title">
-Gestión de Licencias
+Acceso al Panel
 </h3>
 
 <p class="login-subtitle">
-Accede al panel de administración
+Ingresa tus credenciales para continuar
 </p>
 
 </div>
@@ -27,16 +28,17 @@ Accede al panel de administración
 
 {% if error %}
 
-<div class="alert alert-danger mt-3">
+<div class="alert alert-danger">
+<i class="bi bi-exclamation-triangle"></i>
 {{ error }}
 </div>
 
 {% endif %}
 
 
-<form method="POST" class="login-form mt-4">
+<form method="POST" class="login-form">
 
-<div class="mb-3">
+<div>
 
 <label class="form-label">
 Usuario
@@ -45,13 +47,14 @@ Usuario
 <input
 type="text"
 name="usuario"
-class="form-control form-control-lg"
+class="form-control"
 placeholder="Ingrese su usuario"
 required>
 
 </div>
 
-<div class="mb-4">
+
+<div>
 
 <label class="form-label">
 Contraseña
@@ -60,21 +63,24 @@ Contraseña
 <input
 type="password"
 name="password"
-class="form-control form-control-lg"
+class="form-control"
 placeholder="Ingrese su contraseña"
 required>
 
 </div>
 
-<button type="submit" class="btn btn-primary w-100 btn-lg">
 
-<i class="bi bi-box-arrow-in-right me-1"></i>
+<button type="submit" class="btn btn-primary w-100">
+
+<i class="bi bi-box-arrow-in-right"></i>
 Ingresar al Panel
 
 </button>
 
 </form>
 
+<div class="login-small">
+Panel administrativo seguro
 </div>
 
 </div>

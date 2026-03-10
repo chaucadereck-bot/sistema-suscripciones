@@ -5,25 +5,30 @@
 
 {% block content %}
 
-<div class="card table-card">
+<div class="dashboard-section">
 
-<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+<div class="table-card">
 
+<div class="table-header">
+
+<div>
 <div class="table-title">
 Pagos a Proveedores
 </div>
 
-<div class="table-sub text-muted small">
+<div class="table-meta">
 Registro de pagos realizados a terceros
+</div>
 </div>
 
 </div>
+
 
 <div class="table-responsive">
 
-<table class="table table-hover table-sm align-middle mb-0">
+<table class="table align-middle mb-0">
 
-<thead class="table-light">
+<thead>
 
 <tr>
 <th>ID Pago</th>
@@ -59,7 +64,9 @@ Registro de pagos realizados a terceros
 </td>
 
 <td>
+<span class="badge-soft">
 {{ d[4] }}
+</span>
 </td>
 
 <td>
@@ -67,13 +74,13 @@ Registro de pagos realizados a terceros
 <form action="/subir_archivo/pago_binance/{{ d[0] }}"
 method="POST"
 enctype="multipart/form-data"
-class="d-flex flex-wrap align-items-center gap-2">
+class="upload-group">
 
 <input
 type="file"
 name="archivo"
 id="pago_{{ d[0] }}"
-style="display:none"
+class="file-hidden"
 required
 onchange="this.form.submit()"
 >
@@ -82,7 +89,7 @@ onchange="this.form.submit()"
 
 <a href="{{ d[5] }}"
 target="_blank"
-class="btn btn-outline-secondary btn-sm">
+class="file-btn">
 
 <i class="bi bi-eye"></i>
 Ver
@@ -91,7 +98,7 @@ Ver
 
 <button
 type="button"
-class="btn btn-outline-primary btn-sm"
+class="file-btn primary"
 onclick="document.getElementById('pago_{{ d[0] }}').click()">
 
 <i class="bi bi-upload"></i>
@@ -103,7 +110,7 @@ Reemplazar
 
 <button
 type="button"
-class="btn btn-success btn-sm"
+class="file-btn success"
 onclick="document.getElementById('pago_{{ d[0] }}').click()">
 
 <i class="bi bi-upload"></i>
@@ -124,6 +131,8 @@ Subir
 </tbody>
 
 </table>
+
+</div>
 
 </div>
 

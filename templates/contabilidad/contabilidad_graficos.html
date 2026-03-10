@@ -5,13 +5,23 @@
 
 {% block content %}
 
-<div class="container-fluid">
+<div class="dashboard-section">
 
-<!-- HEADER -->
+<div class="page-header">
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-header-left">
 
-<h5 class="mb-0 fw-semibold">Dashboard financiero</h5>
+<div class="page-title">
+Dashboard Financiero
+</div>
+
+<div class="page-subtitle">
+Análisis de ingresos, pagos y utilidades
+</div>
+
+</div>
+
+<div class="page-actions">
 
 <a href="/contabilidad" class="btn btn-outline-secondary btn-sm">
 <i class="bi bi-arrow-left"></i>
@@ -20,112 +30,130 @@ Volver al registro contable
 
 </div>
 
-<!-- MÉTRICAS PRINCIPALES -->
+</div>
 
-<div class="row g-4 mb-4">
 
-<div class="col-xl-4 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+<!-- MÉTRICAS -->
+
+<div class="metrics-row">
+
+<div class="metric-card">
 
 <div class="metric-header">
-<div class="metric-title">Ingresos Totales</div>
+
+<div class="metric-title">
+Ingresos Totales
+</div>
 
 <div class="metric-icon">
 <i class="bi bi-cash-stack"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-success">
 $ {{ ingresos }}
 </div>
 
-<div class="metric-subtitle">
-ventas registradas en el sistema
+<div class="metric-sub">
+Ventas registradas en el sistema
 </div>
 
 </div>
-</div>
-</div>
 
-<div class="col-xl-4 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+
+<div class="metric-card">
 
 <div class="metric-header">
-<div class="metric-title">Pagos a Terceros</div>
+
+<div class="metric-title">
+Pagos a Terceros
+</div>
 
 <div class="metric-icon">
 <i class="bi bi-credit-card"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-danger">
 $ {{ pagos }}
 </div>
 
-<div class="metric-subtitle">
-costos operativos registrados
+<div class="metric-sub">
+Costos operativos registrados
 </div>
 
 </div>
-</div>
-</div>
 
-<div class="col-xl-4 col-md-6">
-<div class="card metric-card h-100">
-<div class="card-body">
+
+
+<div class="metric-card">
 
 <div class="metric-header">
-<div class="metric-title">Utilidad</div>
+
+<div class="metric-title">
+Utilidad
+</div>
 
 <div class="metric-icon">
 <i class="bi bi-graph-up-arrow"></i>
 </div>
+
 </div>
 
 <div class="metric-value text-primary">
 $ {{ utilidad }}
 </div>
 
-<div class="metric-subtitle">
-beneficio neto del sistema
+<div class="metric-sub">
+Beneficio neto del sistema
 </div>
 
 </div>
-</div>
-</div>
 
 </div>
+
+
 
 <!-- GRÁFICOS -->
 
-<div class="row g-4">
+<div class="dashboard-grid">
 
-<!-- GRÁFICO PRINCIPAL -->
+<!-- PRINCIPAL -->
 
-<div class="col-xl-7">
+<div class="content-card">
 
-<div class="card h-100">
+<div class="section-header">
 
-<div class="card-header">
-
-<div class="fw-semibold">
+<div class="section-title">
 Ingresos vs Pagos vs Utilidad
 </div>
 
-<small class="text-muted">
-comparativa financiera general
-</small>
+<div class="text-muted small">
+Comparativa financiera general
+</div>
 
 </div>
 
-<div class="card-body">
-
 {% if ingresos == 0 and pagos == 0 %}
 
-<div class="chart-empty">
-Sin datos financieros disponibles aún
+<div class="empty-state">
+
+<div class="empty-icon">
+<i class="bi bi-bar-chart"></i>
+</div>
+
+<div class="empty-title">
+Sin datos financieros disponibles
+</div>
+
+<div class="empty-description">
+Aún no existen registros contables para mostrar
+</div>
+
 </div>
 
 {% else %}
@@ -136,7 +164,8 @@ Sin datos financieros disponibles aún
 id="graficoFinanzas"
 data-ingresos="{{ ingresos }}"
 data-pagos="{{ pagos }}"
-data-utilidad="{{ utilidad }}"> </canvas>
+data-utilidad="{{ utilidad }}">
+</canvas>
 
 </div>
 
@@ -144,49 +173,56 @@ data-utilidad="{{ utilidad }}"> </canvas>
 
 </div>
 
-</div>
 
-</div>
 
-<!-- GRÁFICO SECUNDARIO -->
+<!-- DISTRIBUCIÓN -->
 
-<div class="col-xl-5">
+<div class="content-card">
 
-<div class="card h-100">
+<div class="section-header">
 
-<div class="card-header">
-
-<div class="fw-semibold">
+<div class="section-title">
 Distribución Financiera
 </div>
 
-<small class="text-muted">
-proporción entre ingresos y pagos
-</small>
+<div class="text-muted small">
+Proporción entre ingresos y pagos
+</div>
 
 </div>
 
-<div class="card-body">
-
 {% if ingresos == 0 and pagos == 0 %}
 
-<div class="chart-empty">
-Sin datos financieros disponibles aún
+<div class="empty-state">
+
+<div class="empty-icon">
+<i class="bi bi-pie-chart"></i>
+</div>
+
+<div class="empty-title">
+Sin datos financieros disponibles
+</div>
+
+<div class="empty-description">
+Aún no existen registros contables para mostrar
+</div>
+
 </div>
 
 {% else %}
 
 <div class="chart-container chart-md">
 
-<canvas id="graficoDistribucion"></canvas>
+<canvas
+id="graficoDistribucion"
+data-ingresos="{{ ingresos }}"
+data-pagos="{{ pagos }}"
+data-utilidad="{{ utilidad }}">
+</canvas>
 
 </div>
 
 {% endif %}
-
-</div>
-
-</div>
 
 </div>
 

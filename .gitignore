@@ -1,20 +1,74 @@
-# Python
+# ===============================
+# PYTHON
+# ===============================
+
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Base de datos local
+# ===============================
+# ENTORNOS VIRTUALES
+# ===============================
+
+venv/
+env/
+.venv/
+
+# ===============================
+# VARIABLES DE ENTORNO
+# ===============================
+
+.env
+.env.*
+
+# ===============================
+# BASES DE DATOS LOCALES
+# ===============================
+
 *.db
 *.db-journal
+*.sqlite
+*.sqlite3
 
-# VSCode
-.vscode/
+# ===============================
+# ARCHIVOS DEL SISTEMA
+# ===============================
 
-# uploads (ignorar contenido pero mantener carpeta)
-uploads/*
-!uploads/.keep
-
-# Mac
 .DS_Store
+Thumbs.db
 
-# Excel local
-*.xlsx
+# ===============================
+# CACHE Y TEMPORALES
+# ===============================
+
+*.log
+*.tmp
+*.bak
+
+# ===============================
+# IDEs
+# ===============================
+
+.vscode/
+.idea/
+
+# ===============================
+# ARCHIVOS DE DEPLOY
+# ===============================
+
+*.pem
+*.key
+
+# ===============================
+# ARCHIVOS SUBIDOS (si usas uploads local)
+# ===============================
+
+uploads/
+
+# ===============================
+# CACHE DE PYTHON
+# ===============================
+
+.pytest_cache/
+.mypy_cache/

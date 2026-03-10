@@ -5,20 +5,19 @@
 
 {% block content %}
 
-<div class="card form-card">
+<div class="dashboard-section">
+
+<div class="form-card">
 
 <div class="card-header">
 
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-
-<div class="form-title">
+<div class="card-header-title">
+<i class="bi bi-arrow-repeat me-2"></i>
 Renovación de Servicio
 </div>
 
 <div class="text-muted small">
 Registrar renovación del cliente
-</div>
-
 </div>
 
 </div>
@@ -30,14 +29,14 @@ Registrar renovación del cliente
 
 <!-- INFORMACIÓN DEL CLIENTE -->
 
-<div class="section-title mb-3">
+<div class="section-title">
 <i class="bi bi-person-check me-2"></i>
 Información del Cliente
 </div>
 
-<div class="row g-4">
+<div class="form-row">
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Código Venta
@@ -51,7 +50,7 @@ readonly>
 
 </div>
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Cliente
@@ -73,14 +72,16 @@ readonly>
 
 <!-- PROVEEDOR -->
 
-<div class="section-title mb-3">
+<div class="section-title">
+
 <i class="bi bi-building me-2"></i>
 Proveedor del Servicio
+
 </div>
 
-<div class="row g-4">
+<div class="form-row">
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Proveedor existente
@@ -100,7 +101,7 @@ Seleccionar proveedor
 
 </div>
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Nuevo proveedor
@@ -122,14 +123,16 @@ placeholder="Si no existe, escribe el proveedor">
 
 <!-- INFORMACIÓN DE PAGO -->
 
-<div class="section-title mb-3">
+<div class="section-title">
+
 <i class="bi bi-cash-coin me-2"></i>
 Pago al Proveedor
+
 </div>
 
-<div class="row g-4">
+<div class="form-row">
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Monto pagado al tercero (USDT)
@@ -145,7 +148,7 @@ required>
 
 </div>
 
-<div class="col-md-6">
+<div>
 
 <label class="form-label">
 Comprobante Bancario
@@ -166,20 +169,18 @@ Formatos permitidos: JPG o PDF
 </div>
 
 
-<!-- BOTONES -->
-
-<div class="form-actions mt-4 d-flex flex-wrap gap-2">
+<div class="form-actions mt-4">
 
 <button type="submit" class="btn btn-warning">
 
-<i class="bi bi-arrow-repeat me-1"></i>
+<i class="bi bi-arrow-repeat"></i>
 Renovar Servicio
 
 </button>
 
-<a href="/" class="btn btn-outline-secondary">
+<a href="/clientes" class="btn btn-outline-secondary">
 
-<i class="bi bi-arrow-left me-1"></i>
+<i class="bi bi-arrow-left"></i>
 Cancelar
 
 </a>
@@ -187,6 +188,8 @@ Cancelar
 </div>
 
 </form>
+
+</div>
 
 </div>
 

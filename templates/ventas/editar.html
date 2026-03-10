@@ -5,13 +5,14 @@
 
 {% block content %}
 
-<div class="card form-card">
+<div class="dashboard-section">
+
+<div class="form-card">
 
 <div class="card-header">
 
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-
-<div class="form-title">
+<div class="card-header-title">
+<i class="bi bi-pencil me-2"></i>
 Editar Información del Cliente
 </div>
 
@@ -21,15 +22,13 @@ Modificar datos del registro
 
 </div>
 
-</div>
-
 <div class="card-body">
 
 <form method="POST">
 
-<div class="row g-4">
+<div class="form-row">
 
-<div class="col-xl-3 col-md-4">
+<div>
 
 <label class="form-label">
 Código Venta
@@ -43,7 +42,8 @@ readonly>
 
 </div>
 
-<div class="col-xl-3 col-md-4">
+
+<div>
 
 <label class="form-label">
 Fecha
@@ -58,7 +58,8 @@ required>
 
 </div>
 
-<div class="col-xl-6 col-md-12">
+
+<div>
 
 <label class="form-label">
 Cliente
@@ -73,7 +74,8 @@ required>
 
 </div>
 
-<div class="col-xl-4 col-md-6">
+
+<div>
 
 <label class="form-label">
 Teléfono
@@ -88,7 +90,8 @@ placeholder="Número de contacto">
 
 </div>
 
-<div class="col-xl-4 col-md-6">
+
+<div>
 
 <label class="form-label">
 Servicio
@@ -108,7 +111,8 @@ Servicio
 
 </div>
 
-<div class="col-xl-4 col-md-12">
+
+<div>
 
 <label class="form-label">
 Correo de la cuenta
@@ -126,20 +130,18 @@ placeholder="correo@ejemplo.com">
 </div>
 
 
-<!-- BOTONES -->
-
-<div class="form-actions mt-4 d-flex flex-wrap gap-2">
+<div class="form-actions mt-4">
 
 <button type="submit" class="btn btn-primary">
 
-<i class="bi bi-check-lg me-1"></i>
+<i class="bi bi-check-lg"></i>
 Guardar Cambios
 
 </button>
 
-<a href="/" class="btn btn-outline-secondary">
+<a href="/clientes" class="btn btn-outline-secondary">
 
-<i class="bi bi-arrow-left me-1"></i>
+<i class="bi bi-arrow-left"></i>
 Cancelar
 
 </a>
@@ -147,6 +149,8 @@ Cancelar
 </div>
 
 </form>
+
+</div>
 
 </div>
 

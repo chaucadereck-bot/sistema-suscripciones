@@ -18,6 +18,9 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # ======================================
@@ -37,7 +40,7 @@ logger = logging.getLogger(__name__)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if "usuario" not in session:
+        if not session.get("usuario"):
             return redirect("/login")
         return f(*args, **kwargs)
     return decorated_function
@@ -46,7 +49,9 @@ def login_required(f):
 # ======================================
 # THREADPOOL WORKER (BACKGROUND TASKS)
 # ======================================
-telegram_executor = ThreadPoolExecutor(max_workers=2)
+telegram_executor = ThreadPoolExecutor(
+    max_workers=int(os.getenv("THREADPOOL_WORKERS", 2))
+)
 
 
 # ======================================
@@ -56,8 +61,11 @@ http = requests.Session()
 
 retries = Retry(
     total=3,
+    connect=3,
+    read=3,
     backoff_factor=0.5,
-    status_forcelist=[500, 502, 503, 504]
+    status_forcelist=[500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "POST"]
 )
 
 adapter = HTTPAdapter(
@@ -88,19 +96,23 @@ Compress(app)
 # ======================================
 @app.after_request
 def add_cache_headers(response):
-    response.headers["Cache-Control"] = "public, max-age=300"
+    if request.method == "GET" and response.status_code == 200 and not session.get("usuario"):
+        response.headers["Cache-Control"] = "public, max-age=300"
+    else:
+        response.headers["Cache-Control"] = "no-store"
     return response
 
 
 # ======================================
 # CONFIGURACIÓN DE SESIONES
 # ======================================
-app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(32))
+app.secret_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
 
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=True
+    SESSION_COOKIE_SECURE=bool(os.getenv("DATABASE_URL")),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
 )
 
 # Límite máximo de subida (2MB)
@@ -110,8 +122,8 @@ app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 # ======================================
 # CONFIGURACIÓN SUPABASE
 # ======================================
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").strip()
+SUPABASE_KEY = (os.getenv("SUPABASE_KEY") or "").strip()
 
 USANDO_SUPABASE = bool(SUPABASE_URL and SUPABASE_KEY)
 
@@ -124,10 +136,10 @@ else:
 # ======================================
 # VARIABLES DEL SISTEMA
 # ======================================
-ALERTA_DIAS = 3
+ALERTA_DIAS = int(os.getenv("ALERTA_DIAS", 3))
 
-USUARIO = os.getenv("APP_USER")
-PASSWORD = os.getenv("APP_PASSWORD")
+USUARIO = (os.getenv("APP_USER") or "").strip()
+PASSWORD = (os.getenv("APP_PASSWORD") or "").strip()
 
 if not USUARIO or not PASSWORD:
     raise RuntimeError("APP_USER y APP_PASSWORD deben estar definidos como variables de entorno.")
@@ -139,9 +151,8 @@ if not USUARIO or not PASSWORD:
 def obtener_conexion():
 
     # Reutilizar conexión existente en la request
-    if "db_conn" in g:
-        conn = g.db_conn
-
+    conn = g.get("db_conn")
+    if conn:
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT 1")
@@ -163,7 +174,11 @@ def obtener_conexion():
                 database_url,
                 connect_timeout=10,
                 sslmode="require",
-                application_name="saas_sistema"
+                application_name="saas_sistema",
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=5
             )
 
             conn.autocommit = True
@@ -185,7 +200,7 @@ def obtener_conexion():
         return conn
 
     except Exception as e:
-        logger.error("Error conectando a la base de datos: %s", e)
+        logger.exception("Error conectando a la base de datos")
         raise
 
 
@@ -200,26 +215,28 @@ def cerrar_conexion(exception=None):
 
     conn = g.pop("db_conn", None)
 
-    if conn is not None:
+    if conn:
         try:
             conn.close()
-        except Exception as e:
-            logger.error("Error cerrando conexión DB: %s", e)
+        except Exception:
+            logger.exception("Error cerrando conexión DB")
 
 
 # ======================================
 # DETECTAR TIPO DE BASE DE DATOS
 # ======================================
+DATABASE_URL = os.getenv("DATABASE_URL")
+USANDO_POSTGRES = bool(DATABASE_URL)
+
 def es_postgres():
-    database_url = os.getenv("DATABASE_URL")
-    return bool(database_url)
+    return USANDO_POSTGRES
 
 
 # ======================================
 # FUNCIÓN PARA ADAPTAR PLACEHOLDERS
 # ======================================
 def adaptar_query(query):
-    if es_postgres():
+    if USANDO_POSTGRES:
         return query.replace("?", "%s")
     return query
 
@@ -249,7 +266,7 @@ def crear_tabla():
                 precio NUMERIC,
                 correo_cuenta VARCHAR(100),
                 estado VARCHAR(50)
-            );
+            )
         """))
 
         # ======================================
@@ -262,39 +279,32 @@ def crear_tabla():
             "notificado_vencido"
         ]
 
-        for columna in columnas_notificacion:
+        if es_postgres():
 
-            try:
+            for columna in columnas_notificacion:
+                cursor.execute(f"""
+                    ALTER TABLE ventas
+                    ADD COLUMN IF NOT EXISTS {columna} BOOLEAN DEFAULT FALSE
+                """)
 
-                if es_postgres():
+        else:
 
+            cursor.execute("PRAGMA table_info(ventas)")
+            columnas_existentes = {row[1] for row in cursor.fetchall()}
+
+            for columna in columnas_notificacion:
+                if columna not in columnas_existentes:
                     cursor.execute(f"""
                         ALTER TABLE ventas
-                        ADD COLUMN IF NOT EXISTS {columna} BOOLEAN DEFAULT FALSE
-                    """)
-
-                else:
-
-                    # SQLite no soporta IF NOT EXISTS en columnas
-                    cursor.execute(adaptar_query(f"""
-                        ALTER TABLE ventas
                         ADD COLUMN {columna} BOOLEAN DEFAULT FALSE
-                    """))
-
-            except Exception:
-                # Si ya existe la columna continuamos
-                pass
+                    """)
 
         conexion.commit()
 
-    except Exception as e:
+    except Exception:
         conexion.rollback()
-        logger.error("Error creando tabla ventas: %s", e)
+        logger.exception("Error creando tabla ventas")
         raise
-
-    finally:
-        conexion.close()
-
 
 
 # ======================================
@@ -317,7 +327,7 @@ def crear_tablas_contables():
                 precio_base NUMERIC NOT NULL,
                 costo_base NUMERIC NOT NULL,
                 duracion_meses INTEGER NOT NULL
-            );
+            )
         """))
 
         # ======================================
@@ -337,7 +347,7 @@ def crear_tablas_contables():
                     ON DELETE CASCADE,
                 FOREIGN KEY (id_servicio)
                     REFERENCES servicios(id_servicio)
-            );
+            )
         """))
 
         # ======================================
@@ -354,18 +364,15 @@ def crear_tablas_contables():
                 FOREIGN KEY (id_contable)
                     REFERENCES ventas_contables(id_contable)
                     ON DELETE CASCADE
-            );
+            )
         """))
 
         conexion.commit()
 
-    except Exception as e:
+    except Exception:
         conexion.rollback()
-        logger.error("Error creando tablas contables: %s", e)
+        logger.exception("Error creando tablas contables")
         raise
-
-    finally:
-        conexion.close()
 
 
 # ======================================
@@ -379,11 +386,11 @@ def insertar_servicios_base():
     try:
 
         # Verificar si ya existen servicios
-        cursor.execute("SELECT COUNT(*) FROM servicios")
+        cursor.execute(adaptar_query("SELECT COUNT(*) FROM servicios"))
         cantidad = cursor.fetchone()[0]
 
         if cantidad > 0:
-            return  # Ya hay servicios, no hacemos nada
+            return
 
         servicios_base = [
             ("SERV-001", "Adobe 1 año", 97, 50, 12),
@@ -396,29 +403,21 @@ def insertar_servicios_base():
             ("SERV-009", "Autodesk 1 año", 35, 15, 12),
         ]
 
-        for s in servicios_base:
+        query = adaptar_query("""
+            INSERT INTO servicios
+            (id_servicio, nombre_servicio, precio_base, costo_base, duracion_meses)
+            VALUES (?,?,?,?,?)
+        """)
 
-            if es_postgres():
-                cursor.execute("""
-                    INSERT INTO servicios
-                    (id_servicio, nombre_servicio, precio_base, costo_base, duracion_meses)
-                    VALUES (%s,%s,%s,%s,%s)
-                """, s)
-            else:
-                cursor.execute("""
-                    INSERT INTO servicios
-                    VALUES (?,?,?,?,?)
-                """, s)
+        for s in servicios_base:
+            cursor.execute(query, s)
 
         conexion.commit()
 
-    except Exception as e:
+    except Exception:
         conexion.rollback()
-        logger.error("Error insertando servicios base: %s", e)
+        logger.exception("Error insertando servicios base")
         raise
-
-    finally:
-        conexion.close()
 
 
 # ======================================
@@ -429,10 +428,10 @@ def generar_codigo():
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    try:
+    año_actual = datetime.now().year
+    patron = f"VEN-{año_actual}-%"
 
-        año_actual = datetime.now().year
-        patron = f"VEN-{año_actual}-%"
+    try:
 
         cursor.execute(
             adaptar_query("""
@@ -447,21 +446,19 @@ def generar_codigo():
 
         ultimo = cursor.fetchone()
 
-        if ultimo and ultimo[0]:
+        if ultimo:
+            codigo = ultimo[0] if not isinstance(ultimo, dict) else ultimo["codigo_venta"]
             try:
-                partes = ultimo[0].split("-")
+                partes = codigo.split("-")
                 numero = int(partes[2]) + 1
             except Exception:
                 numero = 1
         else:
             numero = 1
 
-    except Exception as e:
-        logger.error("Error generando código de venta: %s", e)
+    except Exception:
+        logger.exception("Error generando código de venta")
         numero = 1
-
-    finally:
-        conexion.close()
 
     random_hex = secrets.token_hex(2)
 
@@ -469,12 +466,54 @@ def generar_codigo():
 
 
 # ======================================
+# GENERAR LINK WHATSAPP
+# ======================================
+def generar_link_whatsapp(cliente, telefono, servicio, fecha_vencimiento):
+
+    try:
+
+        if not telefono:
+            return None
+
+        telefono = str(telefono).strip()
+
+        # Normalizar número Ecuador
+        telefono = telefono.replace(" ", "").replace("-", "")
+
+        if telefono.startswith("0"):
+            telefono = "593" + telefono[1:]
+
+        if not telefono.startswith("593"):
+            telefono = "593" + telefono
+
+        if isinstance(fecha_vencimiento, str):
+            fecha_vencimiento = datetime.strptime(
+                fecha_vencimiento[:10], "%Y-%m-%d"
+            ).date()
+
+        fecha_txt = fecha_vencimiento.strftime("%d/%m/%Y")
+
+        mensaje = (
+            f"Hola {cliente}, tu suscripción de {servicio} "
+            f"vence el {fecha_txt}. ¿Deseas renovarla?"
+        )
+
+        mensaje = requests.utils.quote(mensaje)
+
+        return f"https://wa.me/{telefono}?text={mensaje}"
+
+    except Exception:
+        logger.exception("Error generando link WhatsApp")
+        return None
+
+
+# ======================================
 # TELEGRAM (WORKER THREADPOOL - MÁS ESCALABLE)
 # ======================================
 def enviar_telegram(mensaje):
 
-    token = os.getenv("TELEGRAM_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    token = (os.getenv("TELEGRAM_TOKEN") or "").strip()
+    chat_id = (os.getenv("TELEGRAM_CHAT_ID") or "").strip()
 
     if not token or not chat_id:
         return
@@ -483,7 +522,7 @@ def enviar_telegram(mensaje):
 
     payload = {
         "chat_id": chat_id,
-        "text": mensaje
+        "text": str(mensaje)[:4096]
     }
 
     # ======================================
@@ -494,18 +533,18 @@ def enviar_telegram(mensaje):
             response = http.post(url, data=payload, timeout=10)
 
             if response.status_code != 200:
-                logger.error("Telegram error: %s", response.text)
+                logger.error("Telegram error %s: %s", response.status_code, response.text)
 
-        except Exception as e:
-            logger.error("Error enviando mensaje a Telegram: %s", e)
+        except Exception:
+            logger.exception("Error enviando mensaje a Telegram")
 
     # ======================================
     # EJECUCIÓN EN BACKGROUND
     # ======================================
     try:
         telegram_executor.submit(_enviar)
-    except Exception as e:
-        logger.error("Error enviando tarea Telegram al executor: %s", e)
+    except Exception:
+        logger.exception("Error enviando tarea Telegram al executor")
         
 
 # ======================================
@@ -518,59 +557,51 @@ def crear_indices():
 
     try:
 
-        # Índice para búsquedas por fecha de vencimiento (dashboard / alertas)
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_fecha_vencimiento
         ON ventas (fecha_vencimiento)
-        """)
+        """))
 
-        # Índice para búsquedas por código de venta
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_codigo
         ON ventas (codigo_venta)
-        """)
+        """))
 
-        # Índice para consultas contables por código
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_contables_codigo
         ON ventas_contables (codigo_venta)
-        """)
+        """))
 
-        # Índice para pagos de terceros
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_pagos_contable
         ON pagos_terceros (id_contable)
-        """)
+        """))
 
-        # ======================================
-        # NUEVOS ÍNDICES PARA ESCALABILIDAD
-        # ======================================
-
-        # Índice para filtros por estado (activo / vencido)
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_estado
         ON ventas (estado)
-        """)
+        """))
 
-        # Índice para consultas por servicio
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_servicio
         ON ventas (servicio)
-        """)
+        """))
 
-        # Índice para consultas contables por fecha
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_contables_fecha
         ON ventas_contables (fecha)
-        """)
+        """))
 
         conexion.commit()
 
-    except Exception as e:
-        logger.error("Error creando índices: %s", e)
+    except Exception:
+        logger.exception("Error creando índices")
 
     finally:
-        conexion.close()
+        try:
+            conexion.close()
+        except Exception:
+            pass
 
 
 # ======================================
@@ -582,6 +613,8 @@ _storage_cache = {
     "timestamp": 0
 }
 
+_storage_cache_lock = threading.Lock()
+
 # ======================================
 # CACHE DASHBOARD (TTL 30s)
 # ======================================
@@ -590,13 +623,15 @@ _dashboard_cache = {
     "timestamp": 0
 }
 
+_dashboard_cache_lock = threading.Lock()
+
 # ======================================
 # INVALIDAR CACHE DASHBOARD
 # ======================================
 def limpiar_cache_dashboard():
-    global _dashboard_cache
-    _dashboard_cache["data"] = None
-    _dashboard_cache["timestamp"] = 0
+    with _dashboard_cache_lock:
+        _dashboard_cache["data"] = None
+        _dashboard_cache["timestamp"] = 0
 
 
 # ======================================
@@ -606,9 +641,9 @@ def calcular_storage():
 
     global _storage_cache
 
-    # Cache 5 minutos
-    if time.time() - _storage_cache["timestamp"] < 300:
-        return _storage_cache["usado"], _storage_cache["disponible"]
+    with _storage_cache_lock:
+        if time.time() - _storage_cache["timestamp"] < 300:
+            return _storage_cache["usado"], _storage_cache["disponible"]
 
     total_bytes = 0
 
@@ -653,16 +688,17 @@ def calcular_storage():
                     except Exception:
                         continue
 
-    except Exception as e:
-        logger.error("Error calculando storage: %s", e)
+    except Exception:
+        logger.exception("Error calculando storage")
         return _storage_cache["usado"], _storage_cache["disponible"]
 
     usado_mb = round(total_bytes / (1024 * 1024), 2)
     disponible_mb = round(max(0, 50 - usado_mb), 2)
 
-    _storage_cache["usado"] = usado_mb
-    _storage_cache["disponible"] = disponible_mb
-    _storage_cache["timestamp"] = time.time()
+    with _storage_cache_lock:
+        _storage_cache["usado"] = usado_mb
+        _storage_cache["disponible"] = disponible_mb
+        _storage_cache["timestamp"] = time.time()
 
     return usado_mb, disponible_mb
 
@@ -672,11 +708,13 @@ def calcular_storage():
 # ======================================
 def revisar_vencimientos():
 
-    # Ejecutar la revisión en background (no bloquea Flask)
     try:
+        if telegram_executor._shutdown:
+            logger.warning("Executor apagado, no se puede programar revisar_vencimientos")
+            return
         telegram_executor.submit(_revisar_vencimientos_worker)
-    except Exception as e:
-        logger.error("Error enviando tarea revisar_vencimientos al executor: %s", e)
+    except Exception:
+        logger.exception("Error enviando tarea revisar_vencimientos al executor")
 
 
 # ======================================
@@ -686,54 +724,56 @@ def _revisar_vencimientos_worker():
 
     from datetime import datetime, timedelta
 
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
+    with app.app_context():
 
-    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
 
-        hoy = (datetime.utcnow() - timedelta(hours=5)).date()
-        limite = hoy + timedelta(days=ALERTA_DIAS)
+        try:
 
-        cursor.execute(adaptar_query("""
-            SELECT codigo_venta, cliente, servicio,
-                   duracion_meses, telefono,
-                   fecha_vencimiento,
-                   COALESCE(notificado_3, FALSE),
-                   COALESCE(notificado_2, FALSE),
-                   COALESCE(notificado_1, FALSE),
-                   COALESCE(notificado_vencido, FALSE)
-            FROM ventas
-            WHERE fecha_vencimiento <= ?
-            ORDER BY fecha_vencimiento ASC
-        """), (limite,))
+            hoy = (datetime.utcnow() - timedelta(hours=5)).date()
+            limite = hoy + timedelta(days=ALERTA_DIAS)
 
-        registros = cursor.fetchall()
+            cursor.execute(adaptar_query("""
+                SELECT codigo_venta, cliente, servicio,
+                       duracion_meses, telefono,
+                       fecha_vencimiento,
+                       COALESCE(notificado_3, FALSE),
+                       COALESCE(notificado_2, FALSE),
+                       COALESCE(notificado_1, FALSE),
+                       COALESCE(notificado_vencido, FALSE)
+                FROM ventas
+                WHERE fecha_vencimiento <= ?
+                ORDER BY fecha_vencimiento ASC
+            """), (limite,))
 
-        updates = []
+            registros = cursor.fetchall()
 
-        for r in registros:
+            updates = []
 
-            codigo = r[0]
-            cliente = r[1]
-            servicio = r[2]
-            duracion = r[3]
-            telefono = r[4]
-            fecha_v = r[5]
+            for r in registros:
 
-            notif_3 = bool(r[6])
-            notif_2 = bool(r[7])
-            notif_1 = bool(r[8])
-            notif_v = bool(r[9])
+                codigo = r[0]
+                cliente = r[1]
+                servicio = r[2]
+                duracion = r[3]
+                telefono = r[4]
+                fecha_v = r[5]
 
-            if not fecha_v:
-                continue
+                notif_3 = bool(r[6])
+                notif_2 = bool(r[7])
+                notif_1 = bool(r[8])
+                notif_v = bool(r[9])
 
-            if isinstance(fecha_v, str):
-                fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
+                if not fecha_v:
+                    continue
 
-            dias_restantes = (fecha_v - hoy).days
+                if isinstance(fecha_v, str):
+                    fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
 
-            mensaje = f"""
+                dias_restantes = (fecha_v - hoy).days
+
+                mensaje = f"""
 Cliente: {cliente}
 Servicio: {servicio}
 Duración: {duracion} mes(es)
@@ -741,41 +781,34 @@ Teléfono: {telefono}
 Fecha vencimiento: {fecha_v.strftime('%d/%m/%Y')}
 """
 
-            if dias_restantes == 3 and not notif_3:
-                enviar_telegram("⚠ Faltan 3 días\n" + mensaje)
-                updates.append(("notificado_3", codigo))
+                if dias_restantes == 3 and not notif_3:
+                    enviar_telegram("⚠ Faltan 3 días\n" + mensaje)
+                    updates.append(("notificado_3", codigo))
 
-            elif dias_restantes == 2 and not notif_2:
-                enviar_telegram("⚠ Faltan 2 días\n" + mensaje)
-                updates.append(("notificado_2", codigo))
+                elif dias_restantes == 2 and not notif_2:
+                    enviar_telegram("⚠ Faltan 2 días\n" + mensaje)
+                    updates.append(("notificado_2", codigo))
 
-            elif dias_restantes == 1 and not notif_1:
-                enviar_telegram("⚠ Vence mañana\n" + mensaje)
-                updates.append(("notificado_1", codigo))
+                elif dias_restantes == 1 and not notif_1:
+                    enviar_telegram("⚠ Vence mañana\n" + mensaje)
+                    updates.append(("notificado_1", codigo))
 
-            elif dias_restantes < 0 and not notif_v:
-                enviar_telegram("❌ VENCIDO\n" + mensaje)
-                updates.append(("notificado_vencido", codigo))
+                elif dias_restantes < 0 and not notif_v:
+                    enviar_telegram("❌ VENCIDO\n" + mensaje)
+                    updates.append(("notificado_vencido", codigo))
 
-        # ======================================
-        # ACTUALIZACIONES EN BLOQUE
-        # ======================================
-        for campo, codigo in updates:
-            cursor.execute(adaptar_query(f"""
-                UPDATE ventas
-                SET {campo}=?
-                WHERE codigo_venta=?
-            """), (True, codigo))
+            for campo, codigo in updates:
+                cursor.execute(adaptar_query(f"""
+                    UPDATE ventas
+                    SET {campo}=?
+                    WHERE codigo_venta=?
+                """), (True, codigo))
 
-        conexion.commit()
+            conexion.commit()
 
-    except Exception as e:
-        conexion.rollback()
-        logger.error("Error revisando vencimientos: %s", e)
-
-    finally:
-        conexion.close()
-
+        except Exception:
+            conexion.rollback()
+            logger.exception("Error revisando vencimientos")
 
 # ======================================
 # ACTUALIZAR ESTADOS (OPTIMIZADO SQL)
@@ -789,35 +822,26 @@ def actualizar_estados():
 
         hoy = datetime.today().date()
 
-        # ================================
-        # ACTIVAR SUSCRIPCIONES
-        # ================================
         cursor.execute(adaptar_query("""
             UPDATE ventas
             SET estado='activo'
             WHERE fecha_vencimiento >= ?
-              AND estado <> 'activo'
+              AND (estado IS NULL OR estado <> 'activo')
         """), (hoy,))
 
-        # ================================
-        # MARCAR VENCIDOS
-        # ================================
         cursor.execute(adaptar_query("""
             UPDATE ventas
             SET estado='vencido'
             WHERE fecha_vencimiento < ?
-              AND estado <> 'vencido'
+              AND (estado IS NULL OR estado <> 'vencido')
         """), (hoy,))
 
         conexion.commit()
 
-    except Exception as e:
+    except Exception:
         conexion.rollback()
-        logger.error("Error actualizando estados: %s", e)
+        logger.exception("Error actualizando estados")
         raise
-
-    finally:
-        conexion.close()
 
 
 # ======================================
@@ -830,19 +854,26 @@ def login():
 
         if request.method == "POST":
 
-            usuario = request.form.get("usuario", "").strip()
-            password = request.form.get("password", "").strip()
+            usuario = (request.form.get("usuario") or "").strip()
+            password = (request.form.get("password") or "").strip()
 
-            if usuario and password and usuario == USUARIO and password == PASSWORD:
+            if (
+                usuario
+                and password
+                and secrets.compare_digest(usuario, USUARIO)
+                and secrets.compare_digest(password, PASSWORD)
+            ):
+                session.clear()
                 session["usuario"] = usuario
+                session.permanent = True
                 return redirect("/")
 
             return render_template("login.html", error="Credenciales incorrectas")
 
         return render_template("login.html")
 
-    except Exception as e:
-        logger.error("Error en login: %s", e)
+    except Exception:
+        logger.exception("Error en login")
         return render_template("login.html", error="Error interno del sistema")
 
 
@@ -854,8 +885,8 @@ def logout():
 
     try:
         session.clear()
-    except Exception as e:
-        logger.error("Error en logout: %s", e)
+    except Exception:
+        logger.exception("Error en logout")
 
     return redirect("/login")
 
@@ -864,7 +895,11 @@ def logout():
 # DEBUG TELEGRAM
 # ======================================
 @app.route("/debug-telegram")
+@login_required
 def debug_telegram():
+
+    if os.getenv("FLASK_ENV") != "development":
+        return "Debug deshabilitado", 403
 
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
@@ -889,9 +924,9 @@ def debug_telegram():
 
         return response.text
 
-    except Exception as e:
-        logger.error("Error enviando mensaje Telegram: %s", e)
-        return f"Error enviando mensaje: {e}"
+    except Exception:
+        logger.exception("Error enviando mensaje Telegram")
+        return "Error enviando mensaje"
 
 
 # ======================================
@@ -902,16 +937,18 @@ def cron():
 
     CRON_KEY = os.getenv("CRON_KEY")
 
-    if not CRON_KEY or request.headers.get("X-CRON-KEY") != CRON_KEY:
+    header_key = request.headers.get("X-CRON-KEY", "")
+
+    if not CRON_KEY or not secrets.compare_digest(header_key, CRON_KEY):
         return "Unauthorized", 403
 
     try:
         revisar_vencimientos()
         return "Cron ejecutado correctamente"
 
-    except Exception as e:
-        logger.error("Error ejecutando cron: %s", e)
-        return f"Error en cron: {e}"
+    except Exception:
+        logger.exception("Error ejecutando cron")
+        return "Error en cron", 500
 
 
 # ======================================
@@ -920,17 +957,18 @@ def cron():
 @app.route("/cron-public")
 def cron_public():
 
-    token = request.args.get("token")
+    token = (request.args.get("token") or "").strip()
+    cron_key = os.getenv("CRON_KEY") or ""
 
-    if token != os.getenv("CRON_KEY"):
+    if not cron_key or not secrets.compare_digest(token, cron_key):
         return "Unauthorized", 403
 
     try:
         revisar_vencimientos()
         return "Cron ejecutado correctamente"
 
-    except Exception as e:
-        logger.error("Error ejecutando cron: %s", e)
+    except Exception:
+        logger.exception("Error ejecutando cron-public")
         return "Error ejecutando cron", 500
 
 
@@ -942,17 +980,17 @@ def health():
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        cursor.execute("SELECT 1")
-        conexion.close()
+        cursor.execute(adaptar_query("SELECT 1"))
 
         return {
             "status": "ok",
             "service": "saas-licencias",
-            "database": "connected"
+            "database": "connected",
+            "timestamp": int(time.time())
         }
 
-    except Exception as e:
-        logger.error("Health check error: %s", e)
+    except Exception:
+        logger.exception("Health check error")
 
         return {
             "status": "error",
@@ -969,13 +1007,14 @@ def index():
 
     try:
 
-        # ================================
-        # CACHE DASHBOARD (30s)
-        # ================================
         global _dashboard_cache
 
-        if time.time() - _dashboard_cache["timestamp"] < 30 and _dashboard_cache["data"]:
-            return render_template("dashboard/index.html", **_dashboard_cache["data"])
+        with _dashboard_cache_lock:
+            if (
+                _dashboard_cache["data"]
+                and time.time() - _dashboard_cache["timestamp"] < 30
+            ):
+                return render_template("dashboard/index.html", **_dashboard_cache["data"])
 
         actualizar_estados()
 
@@ -984,9 +1023,6 @@ def index():
 
         hoy = datetime.today().date()
 
-        # ================================
-        # CONTADORES PRINCIPALES (OPTIMIZADO SQL)
-        # ================================
         cursor.execute(adaptar_query("""
             SELECT
                 SUM(CASE WHEN estado='activo' THEN 1 ELSE 0 END),
@@ -1000,9 +1036,6 @@ def index():
         vencidos = int(totales[1] or 0)
         por_vencer = 0
 
-        # ================================
-        # CLIENTES + ALERTAS
-        # ================================
         cursor.execute(adaptar_query("""
             SELECT 
                 codigo_venta,
@@ -1051,14 +1084,8 @@ def index():
 
             datos_con_alerta.append((d, alerta))
 
-        # ================================
-        # STORAGE SUPABASE
-        # ================================
         usado_mb, disponible_mb = calcular_storage()
 
-        # ================================
-        # MÉTRICAS FINANCIERAS
-        # ================================
         cursor.execute(adaptar_query("""
             SELECT 
                 COALESCE(SUM(precio_venta),0),
@@ -1073,9 +1100,6 @@ def index():
         total_costos = float(finanzas[1] or 0)
         total_utilidad = float(finanzas[2] or 0)
 
-        # ================================
-        # PAGOS A TERCEROS
-        # ================================
         cursor.execute(adaptar_query("""
             SELECT COALESCE(SUM(monto_usdt),0)
             FROM pagos_terceros
@@ -1083,11 +1107,6 @@ def index():
 
         total_pagos = float(cursor.fetchone()[0] or 0)
 
-        conexion.close()
-
-        # ================================
-        # CONTEXTO DASHBOARD
-        # ================================
         contexto = {
             "datos": datos_con_alerta,
             "total_activos": activos,
@@ -1100,19 +1119,17 @@ def index():
             "total_utilidad": round(total_utilidad, 2)
         }
 
-        # ================================
-        # GUARDAR CACHE
-        # ================================
-        _dashboard_cache["data"] = contexto
-        _dashboard_cache["timestamp"] = time.time()
+        with _dashboard_cache_lock:
+            _dashboard_cache["data"] = contexto
+            _dashboard_cache["timestamp"] = time.time()
 
         return render_template(
             "dashboard/index.html",
             **contexto
         )
 
-    except Exception as e:
-        logger.error("Error en dashboard: %s", e)
+    except Exception:
+        logger.exception("Error en dashboard")
         return "Error cargando el dashboard", 500
 
 
@@ -1130,17 +1147,16 @@ def agregar():
     if request.method == "POST":
         try:
 
-            codigo_venta = request.form.get("codigo_venta", "").strip()
+            codigo_venta = (request.form.get("codigo_venta") or "").strip()
 
             cursor.execute(adaptar_query("""
                 SELECT 1 FROM ventas WHERE codigo_venta=?
             """), (codigo_venta,))
 
             if cursor.fetchone():
-                conexion.close()
                 return "El código de venta ya existe"
 
-            fecha_input = request.form.get("fecha", "").strip()
+            fecha_input = (request.form.get("fecha") or "").strip()
 
             if "/" in fecha_input:
                 fecha_obj = datetime.strptime(fecha_input, "%d/%m/%Y")
@@ -1149,18 +1165,17 @@ def agregar():
 
             fecha = fecha_obj.strftime("%Y-%m-%d")
 
-            cliente = request.form.get("cliente", "").strip()
-            telefono = request.form.get("telefono", "").strip()
+            cliente = (request.form.get("cliente") or "").strip()
+            telefono = (request.form.get("telefono") or "").strip()
             id_servicio = request.form.get("servicio")
-            correo_cuenta = request.form.get("correo_cuenta", "").strip()
+            correo_cuenta = (request.form.get("correo_cuenta") or "").strip()
 
             proveedor_select = request.form.get("proveedor_select")
             proveedor_nuevo = request.form.get("proveedor_nuevo")
 
             comprobante = request.files.get("comprobante_banco")
 
-            if not comprobante or comprobante.filename.strip() == "":
-                conexion.close()
+            if not comprobante or not comprobante.filename:
                 return "Debe subir comprobante bancario"
 
             if proveedor_nuevo and proveedor_nuevo.strip():
@@ -1179,7 +1194,6 @@ def agregar():
             servicio = cursor.fetchone()
 
             if not servicio:
-                conexion.close()
                 return redirect("/")
 
             precio_base = float(servicio[0])
@@ -1215,13 +1229,13 @@ def agregar():
                         timeout=30
                     )
 
-                    if response.status_code not in [200, 201]:
+                    if response.status_code not in (200, 201):
                         raise Exception(response.text)
 
                     url_banco = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
                 except Exception as e:
-                    logger.error("ERROR REAL STORAGE: %s", e)
+                    logger.exception("ERROR REAL STORAGE")
                     raise Exception(f"Error real en storage: {e}")
 
             else:
@@ -1283,7 +1297,6 @@ def agregar():
 
             conexion.commit()
             limpiar_cache_dashboard()
-            conexion.close()
 
             return redirect("/ventas_contables")
 
@@ -1293,22 +1306,23 @@ def agregar():
             except Exception:
                 pass
 
-            conexion.close()
-            logger.error("Error al agregar cliente: %s", e)
+            logger.exception("Error al agregar cliente")
             return f"Error al agregar cliente: {e}"
 
-    cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
+    cursor.execute(adaptar_query("""
+        SELECT id_servicio, nombre_servicio
+        FROM servicios
+        ORDER BY nombre_servicio
+    """))
     servicios = cursor.fetchall()
 
-    cursor.execute("""
+    cursor.execute(adaptar_query("""
         SELECT DISTINCT nombre_tercero
         FROM pagos_terceros
         WHERE nombre_tercero IS NOT NULL
         ORDER BY nombre_tercero
-    """)
+    """))
     proveedores = cursor.fetchall()
-
-    conexion.close()
 
     return render_template(
         "ventas/agregar.html",
@@ -1316,7 +1330,6 @@ def agregar():
         proveedores=proveedores,
         codigo=generar_codigo()
     )
-
 
 
 # ======================================
@@ -1329,7 +1342,11 @@ def editar(codigo):
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
-    cursor.execute("SELECT id_servicio, nombre_servicio FROM servicios ORDER BY nombre_servicio")
+    cursor.execute(adaptar_query("""
+        SELECT id_servicio, nombre_servicio
+        FROM servicios
+        ORDER BY nombre_servicio
+    """))
     servicios = cursor.fetchall()
 
     if request.method == "POST":
@@ -1337,7 +1354,7 @@ def editar(codigo):
         try:
 
             id_servicio = request.form.get("servicio")
-            fecha_input = request.form.get("fecha", "").strip()
+            fecha_input = (request.form.get("fecha") or "").strip()
 
             fecha_obj = datetime.strptime(fecha_input, "%Y-%m-%d")
 
@@ -1350,7 +1367,6 @@ def editar(codigo):
             servicio_data = cursor.fetchone()
 
             if not servicio_data:
-                conexion.close()
                 return "Servicio no encontrado"
 
             precio_base = float(servicio_data[0])
@@ -1373,14 +1389,14 @@ def editar(codigo):
                     estado=?
                 WHERE codigo_venta=?
             """), (
-                fecha_input,
+                fecha_obj.strftime("%Y-%m-%d"),
                 duracion,
                 fecha_vencimiento.strftime("%Y-%m-%d"),
-                request.form.get("cliente", "").strip(),
-                request.form.get("telefono", "").strip(),
+                (request.form.get("cliente") or "").strip(),
+                (request.form.get("telefono") or "").strip(),
                 id_servicio,
                 precio_base,
-                request.form.get("correo_cuenta", "").strip(),
+                (request.form.get("correo_cuenta") or "").strip(),
                 "activo",
                 codigo
             ))
@@ -1402,7 +1418,6 @@ def editar(codigo):
 
             conexion.commit()
             limpiar_cache_dashboard()
-            conexion.close()
 
             return redirect("/")
 
@@ -1412,8 +1427,7 @@ def editar(codigo):
             except Exception:
                 pass
 
-            conexion.close()
-            logger.error("Error al editar cliente: %s", e)
+            logger.exception("Error al editar cliente")
             return f"Error al editar cliente: {e}"
 
     cursor.execute(adaptar_query("""
@@ -1423,7 +1437,6 @@ def editar(codigo):
     """), (codigo,))
 
     registro = cursor.fetchone()
-    conexion.close()
 
     return render_template("ventas/editar.html", registro=registro, servicios=servicios)
 
@@ -1440,14 +1453,15 @@ def eliminar(codigo):
 
     try:
 
-        # Solo eliminamos la venta principal
-        # Las demás tablas se eliminan automáticamente (ON DELETE CASCADE)
         cursor.execute(adaptar_query("""
             DELETE FROM ventas
             WHERE codigo_venta=?
         """), (codigo,))
 
         conexion.commit()
+        limpiar_cache_dashboard()
+
+        return redirect("/")
 
     except Exception as e:
         try:
@@ -1455,14 +1469,8 @@ def eliminar(codigo):
         except Exception:
             pass
 
-        conexion.close()
-        logger.error("Error eliminando cliente: %s", e)
+        logger.exception("Error eliminando cliente")
         return f"Error al eliminar: {e}"
-
-    limpiar_cache_dashboard()
-    conexion.close()
-
-    return redirect("/")
 
 
 # ======================================
@@ -1484,22 +1492,19 @@ def renovar(codigo):
     venta = cursor.fetchone()
 
     if not venta:
-        conexion.close()
         return redirect("/")
 
     cliente, id_servicio, fecha_v, meses = venta
 
     if request.method == "GET":
 
-        cursor.execute("""
+        cursor.execute(adaptar_query("""
             SELECT DISTINCT nombre_tercero
             FROM pagos_terceros
             WHERE nombre_tercero IS NOT NULL
             ORDER BY nombre_tercero
-        """)
+        """))
         proveedores = cursor.fetchall()
-
-        conexion.close()
 
         return render_template(
             "ventas/renovar.html",
@@ -1512,11 +1517,11 @@ def renovar(codigo):
 
         proveedor_select = request.form.get("proveedor_select")
         proveedor_nuevo = request.form.get("proveedor_nuevo")
-        monto_tercero = float(request.form.get("monto_tercero"))
+        monto_tercero = float(request.form.get("monto_tercero") or 0)
 
         comprobante = request.files.get("comprobante_banco")
 
-        if not comprobante or comprobante.filename.strip() == "":
+        if not comprobante or not comprobante.filename:
             raise Exception("Debe subir comprobante.")
 
         if proveedor_nuevo and proveedor_nuevo.strip():
@@ -1525,7 +1530,7 @@ def renovar(codigo):
             proveedor_final = proveedor_select
 
         if isinstance(fecha_v, str):
-            fecha_v = datetime.strptime(fecha_v, "%Y-%m-%d").date()
+            fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
 
         nueva_fecha = fecha_v + relativedelta(months=int(meses))
         hoy = datetime.today().strftime("%Y-%m-%d")
@@ -1554,13 +1559,13 @@ def renovar(codigo):
                     timeout=30
                 )
 
-                if response.status_code not in [200, 201]:
+                if response.status_code not in (200, 201):
                     raise Exception(response.text)
 
                 url_comprobante = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
             except Exception as e:
-                logger.error("ERROR REAL STORAGE: %s", e)
+                logger.exception("ERROR REAL STORAGE")
                 raise Exception(f"Error real en storage: {e}")
 
         else:
@@ -1629,7 +1634,6 @@ def renovar(codigo):
 
         conexion.commit()
         limpiar_cache_dashboard()
-        conexion.close()
 
         return redirect("/")
 
@@ -1639,8 +1643,7 @@ def renovar(codigo):
         except Exception:
             pass
 
-        conexion.close()
-        logger.error("Error en renovación: %s", e)
+        logger.exception("Error en renovación")
         return f"Error en renovación: {e}"
 
 
@@ -1676,14 +1679,10 @@ def contabilidad():
 
         datos = cursor.fetchall()
 
-    except Exception as e:
-        logger.error("Error cargando contabilidad: %s", e)
-        conexion.close()
+    except Exception:
+        logger.exception("Error cargando contabilidad")
         return "Error cargando contabilidad", 500
 
-    conexion.close()
-
-    # Totales seguros
     total_ingresos = 0
     total_pagos = 0
     total_utilidad = 0
@@ -1732,14 +1731,11 @@ def contabilidad_graficos():
 
         utilidad = ingresos - pagos
 
-    except Exception as e:
-        logger.error("Error generando gráficos contables: %s", e)
+    except Exception:
+        logger.exception("Error generando gráficos contables")
         ingresos = 0
         pagos = 0
         utilidad = 0
-
-    finally:
-        conexion.close()
 
     return render_template(
         "contabilidad/contabilidad_graficos.html",
@@ -1777,13 +1773,10 @@ def servicios_graficos():
         labels = [fila[0] for fila in datos]
         valores = [int(fila[1]) for fila in datos]
 
-    except Exception as e:
-        logger.error("Error generando gráficos de servicios: %s", e)
+    except Exception:
+        logger.exception("Error generando gráficos de servicios")
         labels = []
         valores = []
-
-    finally:
-        conexion.close()
 
     return render_template(
         "servicios/servicios_graficos.html",
@@ -1801,16 +1794,22 @@ def ver_archivo_local(archivo):
 
     try:
 
-        # evitar path traversal
         if ".." in archivo or archivo.startswith("/"):
             return "Acceso inválido", 403
 
         ruta_base = os.path.abspath("uploads")
+        ruta_objetivo = os.path.abspath(os.path.join(ruta_base, archivo))
+
+        if not ruta_objetivo.startswith(ruta_base):
+            return "Acceso inválido", 403
+
+        if not os.path.isfile(ruta_objetivo):
+            return "Archivo no encontrado", 404
 
         return send_from_directory(ruta_base, archivo)
 
-    except Exception as e:
-        logger.error("Error sirviendo archivo local: %s", e)
+    except Exception:
+        logger.exception("Error sirviendo archivo local")
         return "Error accediendo al archivo", 500
 
 
@@ -1848,14 +1847,168 @@ def ventas_contables():
 
         datos = cursor.fetchall()
 
-    except Exception as e:
-        logger.error("Error cargando ventas contables: %s", e)
-        conexion.close()
+    except Exception:
+        logger.exception("Error cargando ventas contables")
         return "Error cargando ventas contables", 500
 
-    conexion.close()
-
     return render_template("contabilidad/ventas_contables.html", datos=datos)
+
+
+# ======================================
+# CLIENTES (VISTA DEDICADA)
+# ======================================
+@app.route("/clientes")
+@login_required
+def clientes():
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    hoy = datetime.today().date()
+
+    try:
+
+        query = """
+            SELECT
+                codigo_venta,
+                cliente,
+                telefono,
+                servicio,
+                precio,
+                fecha,
+                fecha_vencimiento
+            FROM ventas
+            WHERE estado='vencido'
+            ORDER BY fecha_vencimiento ASC
+        """
+
+        cursor.execute(adaptar_query(query))
+        filas = cursor.fetchall()
+
+        clientes = []
+        total_pendiente = 0
+
+        for f in filas:
+
+            fecha_vencimiento = f[6]
+
+            if isinstance(fecha_vencimiento, str):
+                fecha_vencimiento = datetime.strptime(
+                    fecha_vencimiento[:10], "%Y-%m-%d"
+                ).date()
+
+            dias_vencido = (hoy - fecha_vencimiento).days
+
+            precio = float(f[4] or 0)
+
+            clientes.append({
+                "codigo": f[0],
+                "cliente": f[1],
+                "telefono": f[2],
+                "servicio": f[3],
+                "precio": precio,
+                "fecha": f[5],
+                "vencimiento": fecha_vencimiento,
+                "dias_vencido": dias_vencido
+            })
+
+            total_pendiente += precio
+
+        total_clientes_vencidos = len(clientes)
+
+    except Exception:
+        logger.exception("Error cargando clientes vencidos")
+        return "Error cargando clientes", 500
+
+    return render_template(
+        "clientes/clientes.html",
+        clientes=clientes,
+        total_clientes_vencidos=total_clientes_vencidos,
+        total_pendiente=round(total_pendiente, 2)
+    )
+
+
+# ======================================
+# CLIENTES POR RENOVAR
+# ======================================
+@app.route("/clientes_renovar")
+@login_required
+def clientes_renovar():
+
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    hoy = datetime.today().date()
+    limite = hoy + timedelta(days=ALERTA_DIAS)
+
+    try:
+
+        cursor.execute(adaptar_query("""
+            SELECT
+                codigo_venta,
+                cliente,
+                telefono,
+                servicio,
+                precio,
+                fecha_vencimiento
+            FROM ventas
+            WHERE fecha_vencimiento <= ?
+            ORDER BY fecha_vencimiento ASC
+        """), (limite,))
+
+        filas = cursor.fetchall()
+
+        clientes = {
+            "vencidos": [],
+            "dia1": [],
+            "dia2": [],
+            "dia3": []
+        }
+
+        for f in filas:
+
+            fecha_v = f[5]
+
+            if isinstance(fecha_v, str):
+                fecha_v = datetime.strptime(fecha_v[:10], "%Y-%m-%d").date()
+
+            dias = (fecha_v - hoy).days
+
+            data = {
+                "codigo": f[0],
+                "cliente": f[1],
+                "telefono": f[2],
+                "servicio": f[3],
+                "precio": float(f[4] or 0),
+                "vencimiento": fecha_v,
+                "whatsapp": generar_link_whatsapp(
+                    f[1],
+                    f[2],
+                    f[3],
+                    fecha_v
+                )
+            }
+
+            if dias < 0:
+                clientes["vencidos"].append(data)
+
+            elif dias == 1:
+                clientes["dia1"].append(data)
+
+            elif dias == 2:
+                clientes["dia2"].append(data)
+
+            elif dias == 3:
+                clientes["dia3"].append(data)
+
+    except Exception:
+        logger.exception("Error cargando clientes por renovar")
+        return "Error cargando renovaciones", 500
+
+    return render_template(
+        "clientes/renovar_clientes.html",
+        clientes=clientes
+    )
 
 
 # ======================================
@@ -1867,13 +2020,13 @@ def subir_archivo(tipo, identificador):
 
     archivo = request.files.get("archivo")
 
-    if not archivo or archivo.filename.strip() == "":
+    if not archivo or not archivo.filename:
         return "Archivo no enviado o vacío", 400
 
     EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "pdf"}
 
     filename = secure_filename(archivo.filename)
-    extension = filename.split(".")[-1].lower()
+    extension = filename.rsplit(".", 1)[-1].lower()
 
     if extension not in EXTENSIONES_PERMITIDAS:
         return "Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PDF.", 400
@@ -1906,7 +2059,7 @@ def subir_archivo(tipo, identificador):
         nombre_archivo = f"{tipo}_{identificador}_{secrets.token_hex(6)}_{filename}"
         ruta_storage = f"{tipo}/{nombre_archivo}"
 
-        if extension in ["jpg", "jpeg"]:
+        if extension in ("jpg", "jpeg"):
             archivo_optimizado = optimizar_imagen(archivo)
             contenido = archivo_optimizado.read()
         else:
@@ -1929,7 +2082,6 @@ def subir_archivo(tipo, identificador):
         registro = cursor.fetchone()
 
         if not registro:
-            conexion.close()
             return "Registro no encontrado", 404
 
         archivo_anterior = registro[0]
@@ -1953,8 +2105,8 @@ def subir_archivo(tipo, identificador):
                         timeout=10
                     )
 
-            except Exception as e:
-                logger.error("Error eliminando archivo anterior: %s", e)
+            except Exception:
+                logger.exception("Error eliminando archivo anterior")
 
         if USANDO_SUPABASE:
 
@@ -1973,14 +2125,14 @@ def subir_archivo(tipo, identificador):
                 timeout=30
             )
 
-            if response.status_code not in [200, 201]:
+            if response.status_code not in (200, 201):
                 raise Exception(response.text)
 
             url_archivo = f"{SUPABASE_URL}/storage/v1/object/public/comprobantes/{ruta_storage}"
 
         else:
 
-            os.makedirs(f"uploads/{tipo}", exist_ok=True)
+            os.makedirs(os.path.join("uploads", tipo), exist_ok=True)
 
             ruta_local = os.path.join("uploads", tipo, nombre_archivo)
 
@@ -1996,13 +2148,11 @@ def subir_archivo(tipo, identificador):
         """), (url_archivo, identificador))
 
         conexion.commit()
-        conexion.close()
 
         return redirect(request.referrer or "/")
 
     except Exception as e:
-        logger.error("Error subiendo archivo: %s", e)
-        print(traceback.format_exc())
+        logger.exception("Error subiendo archivo")
         return f"Error subiendo archivo: {e}", 500
     
 
@@ -2040,11 +2190,15 @@ def optimizar_imagen(archivo):
 
             buffer.seek(0)
 
-            return buffer
+            buffer.seek(0)
+            return buffer   
 
-    except Exception as e:
-        logger.error("Error optimizando imagen: %s", e)
-        archivo.seek(0)
+    except Exception:
+        logger.exception("Error optimizando imagen")
+        try:
+            archivo.seek(0)
+        except Exception:
+            pass
         return archivo
 
 
@@ -2076,12 +2230,9 @@ def pagos_terceros():
 
         datos = cursor.fetchall()
 
-    except Exception as e:
-        logger.error("Error cargando pagos terceros: %s", e)
-        conexion.close()
+    except Exception:
+        logger.exception("Error cargando pagos terceros")
         return "Error cargando pagos terceros", 500
-
-    conexion.close()
 
     return render_template("contabilidad/pagos_terceros.html", datos=datos)
 
@@ -2110,15 +2261,11 @@ def listar_servicios():
 
         servicios = cursor.fetchall()
 
-    except Exception as e:
-        logger.error("Error cargando servicios: %s", e)
-        conexion.close()
+    except Exception:
+        logger.exception("Error cargando servicios")
         return "Error cargando servicios", 500
 
-    conexion.close()
-
     return render_template("servicios/servicios.html", servicios=servicios)
-
 
 # ======================================
 # NUEVO SERVICIO
@@ -2129,16 +2276,16 @@ def nuevo_servicio():
 
     if request.method == "POST":
 
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+
         try:
 
-            id_servicio = request.form["id_servicio"].strip().upper()
-            nombre = request.form["nombre"].strip()
-            precio = float(request.form["precio"])
-            costo = float(request.form["costo"])
-            duracion = int(request.form["duracion"])
-
-            conexion = obtener_conexion()
-            cursor = conexion.cursor()
+            id_servicio = (request.form.get("id_servicio") or "").strip().upper()
+            nombre = (request.form.get("nombre") or "").strip()
+            precio = float(request.form.get("precio") or 0)
+            costo = float(request.form.get("costo") or 0)
+            duracion = int(request.form.get("duracion") or 0)
 
             cursor.execute(adaptar_query("""
                 INSERT INTO servicios
@@ -2153,7 +2300,6 @@ def nuevo_servicio():
             ))
 
             conexion.commit()
-            conexion.close()
 
             return redirect("/servicios")
 
@@ -2163,7 +2309,7 @@ def nuevo_servicio():
             except Exception:
                 pass
 
-            logger.error("Error creando servicio: %s", e)
+            logger.exception("Error creando servicio")
             return f"Error creando servicio: {e}"
 
     return render_template("servicios/servicio_form.html", modo="nuevo")
@@ -2183,10 +2329,10 @@ def editar_servicio(id_servicio):
 
         try:
 
-            nombre = request.form["nombre"].strip()
-            precio = float(request.form["precio"])
-            costo = float(request.form["costo"])
-            duracion = int(request.form["duracion"])
+            nombre = (request.form.get("nombre") or "").strip()
+            precio = float(request.form.get("precio") or 0)
+            costo = float(request.form.get("costo") or 0)
+            duracion = int(request.form.get("duracion") or 0)
 
             cursor.execute(adaptar_query("""
                 UPDATE servicios
@@ -2204,7 +2350,6 @@ def editar_servicio(id_servicio):
             ))
 
             conexion.commit()
-            conexion.close()
 
             return redirect("/servicios")
 
@@ -2214,8 +2359,7 @@ def editar_servicio(id_servicio):
             except Exception:
                 pass
 
-            conexion.close()
-            logger.error("Error editando servicio: %s", e)
+            logger.exception("Error editando servicio")
             return f"Error editando servicio: {e}"
 
     cursor.execute(adaptar_query("""
@@ -2229,7 +2373,6 @@ def editar_servicio(id_servicio):
     """), (id_servicio,))
 
     servicio = cursor.fetchone()
-    conexion.close()
 
     return render_template("servicios/servicio_form.html", modo="editar", servicio=servicio)
 
@@ -2246,7 +2389,6 @@ def eliminar_servicio(id_servicio):
 
     try:
 
-        # Verificar si está en uso
         cursor.execute(adaptar_query("""
             SELECT COUNT(*)
             FROM ventas_contables
@@ -2256,7 +2398,6 @@ def eliminar_servicio(id_servicio):
         uso = cursor.fetchone()[0]
 
         if uso > 0:
-            conexion.close()
             return "No se puede eliminar. El servicio tiene ventas registradas."
 
         cursor.execute(adaptar_query("""
@@ -2265,7 +2406,6 @@ def eliminar_servicio(id_servicio):
         """), (id_servicio,))
 
         conexion.commit()
-        conexion.close()
 
         return redirect("/servicios")
 
@@ -2275,8 +2415,7 @@ def eliminar_servicio(id_servicio):
         except Exception:
             pass
 
-        conexion.close()
-        logger.error("Error eliminando servicio: %s", e)
+        logger.exception("Error eliminando servicio")
         return f"Error eliminando servicio: {e}"
 
 
@@ -2291,10 +2430,10 @@ def inicializar_base():
         insertar_servicios_base()
         crear_indices()
 
-        print("Base de datos inicializada correctamente")
+        logger.info("Base de datos inicializada correctamente")
 
-    except Exception as e:
-        logger.error("Error inicializando base de datos: %s", e)
+    except Exception:
+        logger.exception("Error inicializando base de datos")
         raise
 
 
@@ -2309,9 +2448,9 @@ with app.app_context():
 if __name__ == "__main__":
 
     try:
-        # Debug solo en entorno local
-        app.run(debug=not es_postgres())
+        debug_mode = os.getenv("FLASK_ENV") == "development"
+        app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=debug_mode)
 
-    except Exception as e:
-        logger.error("Error iniciando aplicación: %s", e)
+    except Exception:
+        logger.exception("Error iniciando aplicación")
         raise
