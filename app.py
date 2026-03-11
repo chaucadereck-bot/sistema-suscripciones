@@ -468,7 +468,7 @@ def generar_codigo():
 # ======================================
 # GENERAR LINK WHATSAPP
 # ======================================
-def generar_link_whatsapp(cliente, telefono, servicio, fecha_vencimiento):
+def generar_link_whatsapp(cliente, telefono, servicio, fecha_vencimiento, precio=0):
 
     try:
 
@@ -494,14 +494,21 @@ def generar_link_whatsapp(cliente, telefono, servicio, fecha_vencimiento):
         fecha_txt = fecha_vencimiento.strftime("%d/%m/%Y")
 
         mensaje = (
-            f"Buen día, estimado/a {cliente}. "
+            f"Buen día, estimado/a {cliente}.\n\n"
+
             f"Le escribimos para informarle que su servicio {servicio} "
-            f"se encuentra próximo a vencer o ya ha vencido (fecha: {fecha_txt}). "
+            f"se encuentra próximo a vencer o ya ha vencido.\n\n"
+
+            f"Fecha de vencimiento: {fecha_txt}\n"
+            f"Precio de renovación: ${precio:.2f}\n\n"
+
             f"Con gusto podemos ayudarle a gestionar la renovación para que continúe "
-            f"disfrutando del servicio sin interrupciones. "
-            f"Quedamos atentos a su confirmación para realizar la renovación. "
+            f"disfrutando del servicio sin interrupciones.\n\n"
+
+            f"Quedamos atentos a su confirmación para realizar la renovación.\n\n"
+
             f"Muchas gracias."
-)
+        )
 
         mensaje = requests.utils.quote(mensaje)
 
@@ -1993,7 +2000,8 @@ def clientes_renovar():
                     f[1],
                     f[2],
                     f[3],
-                    fecha_v
+                    fecha_v,
+                    float(f[4] or 0)
                 )
             }
 
