@@ -138,8 +138,8 @@ else:
 # ======================================
 ALERTA_DIAS = int(os.getenv("ALERTA_DIAS", 3))
 
-USUARIO = (os.getenv("APP_USER") or "").strip()
-PASSWORD = (os.getenv("APP_PASSWORD") or "").strip()
+USUARIO =(os.getenv("APP_USER") or "").strip()
+PASSWORD =(os.getenv("APP_PASSWORD") or "").strip()
 
 if not USUARIO or not PASSWORD:
     raise RuntimeError("APP_USER y APP_PASSWORD deben estar definidos como variables de entorno.")
@@ -494,9 +494,14 @@ def generar_link_whatsapp(cliente, telefono, servicio, fecha_vencimiento):
         fecha_txt = fecha_vencimiento.strftime("%d/%m/%Y")
 
         mensaje = (
-            f"Hola {cliente}, tu suscripción de {servicio} "
-            f"vence el {fecha_txt}. ¿Deseas renovarla?"
-        )
+            f"Buen día, estimado/a {cliente}. "
+            f"Le escribimos para informarle que su servicio {servicio} "
+            f"se encuentra próximo a vencer o ya ha vencido (fecha: {fecha_txt}). "
+            f"Con gusto podemos ayudarle a gestionar la renovación para que continúe "
+            f"disfrutando del servicio sin interrupciones. "
+            f"Quedamos atentos a su confirmación para realizar la renovación. "
+            f"Muchas gracias."
+)
 
         mensaje = requests.utils.quote(mensaje)
 
@@ -860,8 +865,8 @@ def login():
             if (
                 usuario
                 and password
-                and secrets.compare_digest(usuario, USUARIO)
-                and secrets.compare_digest(password, PASSWORD)
+                and secrets.compare_digest(usuario.encode("utf-8"), USUARIO.encode("utf-8"))
+                and secrets.compare_digest(password.encode("utf-8"), PASSWORD.encode("utf-8"))
             ):
                 session.clear()
                 session["usuario"] = usuario
@@ -1870,19 +1875,20 @@ def clientes():
 
         query = """
             SELECT
-                codigo_venta,
-                cliente,
-                telefono,
-                servicio,
-                precio,
-                fecha,
-                fecha_vencimiento
-            FROM ventas
-            WHERE estado='vencido'
-            ORDER BY fecha_vencimiento ASC
+                v.codigo_venta,
+                v.cliente,
+                v.telefono,
+                s.nombre_servicio,
+                v.precio,
+                v.fecha_vencimiento
+            FROM ventas v
+            JOIN servicios s
+                ON v.servicio = s.id_servicio
+            WHERE v.fecha_vencimiento <= ?
+            ORDER BY v.fecha_vencimiento ASC
         """
 
-        cursor.execute(adaptar_query(query))
+        cursor.execute(adaptar_query(query), (hoy,))
         filas = cursor.fetchall()
 
         clientes = []
@@ -1890,7 +1896,7 @@ def clientes():
 
         for f in filas:
 
-            fecha_vencimiento = f[6]
+            fecha_vencimiento = f[5]
 
             if isinstance(fecha_vencimiento, str):
                 fecha_vencimiento = datetime.strptime(
@@ -1945,15 +1951,17 @@ def clientes_renovar():
 
         cursor.execute(adaptar_query("""
             SELECT
-                codigo_venta,
-                cliente,
-                telefono,
-                servicio,
-                precio,
-                fecha_vencimiento
-            FROM ventas
-            WHERE fecha_vencimiento <= ?
-            ORDER BY fecha_vencimiento ASC
+                v.codigo_venta,
+                v.cliente,
+                v.telefono,
+                s.nombre_servicio,
+                v.precio,
+                v.fecha_vencimiento
+            FROM ventas v
+            JOIN servicios s
+                ON v.servicio = s.id_servicio
+            WHERE v.fecha_vencimiento <= ?
+            ORDER BY v.fecha_vencimiento ASC
         """), (limite,))
 
         filas = cursor.fetchall()
@@ -2267,6 +2275,7 @@ def listar_servicios():
 
     return render_template("servicios/servicios.html", servicios=servicios)
 
+
 # ======================================
 # NUEVO SERVICIO
 # ======================================
@@ -2274,14 +2283,35 @@ def listar_servicios():
 @login_required
 def nuevo_servicio():
 
-    if request.method == "POST":
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
 
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
+    try:
+
+        # Obtener último servicio para generar el siguiente ID
+        cursor.execute(adaptar_query("""
+            SELECT id_servicio
+            FROM servicios
+            ORDER BY CAST(SUBSTR(id_servicio,6) AS INTEGER) DESC
+            LIMIT 1
+        """))
+
+        ultimo = cursor.fetchone()
+
+        if ultimo:
+            numero = int(ultimo[0].split("-")[1]) + 1
+        else:
+            numero = 1
+
+        id_servicio = f"SERV-{numero:03d}"
+
+    except Exception:
+        id_servicio = "SERV-001"
+
+    if request.method == "POST":
 
         try:
 
-            id_servicio = (request.form.get("id_servicio") or "").strip().upper()
             nombre = (request.form.get("nombre") or "").strip()
             precio = float(request.form.get("precio") or 0)
             costo = float(request.form.get("costo") or 0)
@@ -2312,7 +2342,11 @@ def nuevo_servicio():
             logger.exception("Error creando servicio")
             return f"Error creando servicio: {e}"
 
-    return render_template("servicios/servicio_form.html", modo="nuevo")
+    return render_template(
+        "servicios/servicio_form.html",
+        modo="nuevo",
+        id_servicio=id_servicio
+    )
 
 
 # ======================================
