@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, send_from_directory, g
+from flask import Flask, render_template, request, redirect, session, send_from_directory, send_file, g
 from flask_compress import Compress
 import os
 import secrets
@@ -19,7 +19,15 @@ from functools import wraps
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.chart import LineChart, BarChart, Reference
+from openpyxl.formatting.rule import ColorScaleRule
+from io import BytesIO
+import sqlite3
+import psycopg2
+from psycopg2.pool import SimpleConnectionPool  
+import requests
 load_dotenv()
 
 
@@ -32,6 +40,24 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ======================================
+# POOL DE CONEXIONES POSTGRESQL (MEJORA PRODUCCIÓN)
+# ======================================
+pg_pool = None
+
+if os.getenv("DATABASE_URL"):
+    try:
+        pg_pool = SimpleConnectionPool(
+            minconn=1,
+            maxconn=5,
+            dsn=os.getenv("DATABASE_URL"),
+            sslmode="require"
+        )
+        logger.info("Pool de conexiones PostgreSQL inicializado")
+    except Exception:
+        logger.exception("Error inicializando pool de PostgreSQL")
 
 
 # ======================================
@@ -170,16 +196,24 @@ def obtener_conexion():
 
         if database_url:
 
-            conn = psycopg2.connect(
-                database_url,
-                connect_timeout=10,
-                sslmode="require",
-                application_name="saas_sistema",
-                keepalives=1,
-                keepalives_idle=30,
-                keepalives_interval=10,
-                keepalives_count=5
-            )
+            # ======================================
+            # POOL DE CONEXIONES POSTGRESQL (MEJORA PRODUCCIÓN)
+            # ======================================
+            global pg_pool
+
+            if pg_pool:
+                conn = pg_pool.getconn()
+            else:
+                conn = psycopg2.connect(
+                    database_url,
+                    connect_timeout=10,
+                    sslmode="require",
+                    application_name="saas_sistema",
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=10,
+                    keepalives_count=5
+                )
 
             conn.autocommit = True
 
@@ -199,7 +233,7 @@ def obtener_conexion():
         g.db_conn = conn
         return conn
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error conectando a la base de datos")
         raise
 
@@ -217,7 +251,15 @@ def cerrar_conexion(exception=None):
 
     if conn:
         try:
-            conn.close()
+
+            # ======================================
+            # DEVOLVER CONEXIÓN AL POOL POSTGRES (MEJORA PRODUCCIÓN)
+            # ======================================
+            if es_postgres() and pg_pool:
+                pg_pool.putconn(conn)
+            else:
+                conn.close()
+
         except Exception:
             logger.exception("Error cerrando conexión DB")
 
@@ -569,51 +611,82 @@ def crear_indices():
 
     try:
 
+        # ======================================
+        # ÍNDICE PARA CONSULTAS POR VENCIMIENTO
+        # ======================================
         cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_fecha_vencimiento
         ON ventas (fecha_vencimiento)
         """))
 
+        # ======================================
+        # ÍNDICE PARA CÓDIGO DE VENTA
+        # ======================================
         cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_codigo
         ON ventas (codigo_venta)
         """))
 
+        # ======================================
+        # ÍNDICE PARA RELACIÓN CONTABLE
+        # ======================================
         cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_contables_codigo
         ON ventas_contables (codigo_venta)
         """))
 
+        # ======================================
+        # ÍNDICE PARA PAGOS DE TERCEROS
+        # ======================================
         cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_pagos_contable
         ON pagos_terceros (id_contable)
         """))
 
+        # ======================================
+        # ÍNDICE PARA FILTRO POR ESTADO
+        # ======================================
         cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_estado
         ON ventas (estado)
         """))
 
+        # ======================================
+        # ÍNDICE PARA SERVICIOS
+        # ======================================
         cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_servicio
         ON ventas (servicio)
         """))
 
+        # ======================================
+        # ÍNDICE PARA CONSULTAS CONTABLES POR FECHA
+        # ======================================
         cursor.execute(adaptar_query("""
         CREATE INDEX IF NOT EXISTS idx_ventas_contables_fecha
         ON ventas_contables (fecha)
+        """))
+
+        # ======================================
+        # NUEVO ÍNDICE OPTIMIZADO PARA DASHBOARD
+        # ======================================
+        cursor.execute(adaptar_query("""
+        CREATE INDEX IF NOT EXISTS idx_dashboard_vencimiento_estado
+        ON ventas (fecha_vencimiento, estado)
+        """))
+
+        # ======================================
+        # NUEVO ÍNDICE PARA ALERTAS DE VENCIMIENTO
+        # ======================================
+        cursor.execute(adaptar_query("""
+        CREATE INDEX IF NOT EXISTS idx_alertas_vencimiento
+        ON ventas (fecha_vencimiento, telefono)
         """))
 
         conexion.commit()
 
     except Exception:
         logger.exception("Error creando índices")
-
-    finally:
-        try:
-            conexion.close()
-        except Exception:
-            pass
 
 
 # ======================================
@@ -628,8 +701,10 @@ _storage_cache = {
 _storage_cache_lock = threading.Lock()
 
 # ======================================
-# CACHE DASHBOARD (TTL 30s)
+# CACHE DASHBOARD INTELIGENTE (MEJORA PRODUCCIÓN)
 # ======================================
+DASHBOARD_CACHE_TTL = int(os.getenv("DASHBOARD_CACHE_TTL", 30))
+
 _dashboard_cache = {
     "data": None,
     "timestamp": 0
@@ -721,10 +796,11 @@ def calcular_storage():
 def revisar_vencimientos():
 
     try:
-        if telegram_executor._shutdown:
-            logger.warning("Executor apagado, no se puede programar revisar_vencimientos")
-            return
         telegram_executor.submit(_revisar_vencimientos_worker)
+
+    except RuntimeError:
+        logger.warning("Executor apagado, no se puede programar revisar_vencimientos")
+
     except Exception:
         logger.exception("Error enviando tarea revisar_vencimientos al executor")
 
@@ -854,15 +930,40 @@ def actualizar_estados():
         conexion.rollback()
         logger.exception("Error actualizando estados")
         raise
+    
+
+# ======================================
+# PROTECCIÓN LOGIN (ANTI FUERZA BRUTA)
+# ======================================
+LOGIN_MAX_INTENTOS = 5
+LOGIN_BLOQUEO_SEGUNDOS = 300
+
+_login_intentos = {}
+_login_lock = threading.Lock()
 
 
 # ======================================
-# LOGIN (OPTIMIZADO)
+# LOGIN (OPTIMIZADO + PROTECCIÓN FUERZA BRUTA)
 # ======================================
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
     try:
+
+        ip = request.remote_addr or "unknown"
+        ahora = time.time()
+
+        with _login_lock:
+            info = _login_intentos.get(ip)
+
+            if info:
+                intentos, timestamp = info
+
+                if intentos >= LOGIN_MAX_INTENTOS and ahora - timestamp < LOGIN_BLOQUEO_SEGUNDOS:
+                    return render_template(
+                        "login.html",
+                        error="Demasiados intentos. Intente nuevamente en unos minutos."
+                    )
 
         if request.method == "POST":
 
@@ -875,10 +976,18 @@ def login():
                 and secrets.compare_digest(usuario.encode("utf-8"), USUARIO.encode("utf-8"))
                 and secrets.compare_digest(password.encode("utf-8"), PASSWORD.encode("utf-8"))
             ):
+
+                with _login_lock:
+                    _login_intentos.pop(ip, None)
+
                 session.clear()
                 session["usuario"] = usuario
                 session.permanent = True
                 return redirect("/")
+
+            with _login_lock:
+                intentos, _ = _login_intentos.get(ip, (0, ahora))
+                _login_intentos[ip] = (intentos + 1, ahora)
 
             return render_template("login.html", error="Credenciales incorrectas")
 
@@ -942,6 +1051,315 @@ def debug_telegram():
 
 
 # ======================================
+# REPORTE FINANCIERO SaaS COMPLETO
+# ======================================
+@app.route("/descargar-reporte/<int:meses>")
+@login_required
+def descargar_reporte(meses):
+
+    try:
+
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+
+        fecha_inicio = datetime.now() - timedelta(days=meses * 30)
+        fecha_inicio = fecha_inicio.strftime("%Y-%m-%d")
+
+        cursor.execute(adaptar_query("""
+        SELECT
+        vc.fecha,
+        vc.codigo_venta,
+        v.cliente,
+        s.nombre_servicio,
+        vc.precio_venta,
+        vc.costo_base,
+        vc.utilidad
+        FROM ventas_contables vc
+        JOIN ventas v
+        ON vc.codigo_venta = v.codigo_venta
+        JOIN servicios s
+        ON vc.id_servicio = s.id_servicio
+        WHERE vc.fecha >= ?
+        ORDER BY vc.fecha DESC
+        """), (fecha_inicio,))
+
+        datos = cursor.fetchall()
+
+        total_ingresos = 0
+        total_costos = 0
+        total_utilidad = 0
+
+        clientes = {}
+        servicios = {}
+        ingresos_mes = {}
+        utilidad_mes = {}
+
+        for d in datos:
+
+            fecha = d[0]
+
+            if isinstance(fecha, str):
+                fecha = datetime.strptime(fecha[:10], "%Y-%m-%d")
+
+            mes = fecha.strftime("%Y-%m")
+
+            ingreso = float(d[4] or 0)
+            costo = float(d[5] or 0)
+            utilidad = float(d[6] or 0)
+
+            total_ingresos += ingreso
+            total_costos += costo
+            total_utilidad += utilidad
+
+            cliente = d[2]
+            servicio = d[3]
+
+            clientes.setdefault(cliente, 0)
+            clientes[cliente] += ingreso
+
+            servicios.setdefault(servicio, 0)
+            servicios[servicio] += ingreso
+
+            ingresos_mes.setdefault(mes, 0)
+            ingresos_mes[mes] += ingreso
+
+            utilidad_mes.setdefault(mes, 0)
+            utilidad_mes[mes] += utilidad
+
+        total_clientes = len(clientes)
+
+        ticket_promedio = total_ingresos / len(datos) if datos else 0
+        ingreso_mensual = total_ingresos / meses if meses else 0
+
+        arr = ingreso_mensual * 12
+        arpu = total_ingresos / total_clientes if total_clientes else 0
+        ltv = arpu * 6
+
+        wb = openpyxl.Workbook()
+        encabezado = PatternFill("solid", fgColor="E2E8F0")
+
+        # ======================================
+        # RESUMEN FINANCIERO
+        # ======================================
+
+        ws_resumen = wb.active
+        ws_resumen.title = "Resumen Financiero"
+
+        ws_resumen.append(["REPORTE FINANCIERO DEL SISTEMA"])
+        ws_resumen.append([])
+
+        resumen = [
+            ("Ingresos Totales", total_ingresos),
+            ("Costos Totales", total_costos),
+            ("Utilidad Total", total_utilidad),
+            ("Clientes Únicos", total_clientes),
+            ("Ticket Promedio", round(ticket_promedio,2)),
+            ("Ingreso Promedio Mensual", round(ingreso_mensual,2)),
+            ("ARR Estimado", round(arr,2)),
+            ("ARPU", round(arpu,2)),
+            ("LTV Estimado", round(ltv,2))
+        ]
+
+        for r in resumen:
+            ws_resumen.append(r)
+
+        ws_resumen["A1"].font = Font(size=14, bold=True)
+
+        # ======================================
+        # VENTAS DETALLADAS
+        # ======================================
+
+        ws_ventas = wb.create_sheet("Ventas Detalladas")
+
+        headers = ["Fecha","Código","Cliente","Servicio","Ingreso","Costo","Utilidad"]
+
+        ws_ventas.append(headers)
+
+        for col in ws_ventas[1]:
+            col.font = Font(bold=True)
+            col.fill = encabezado
+            col.alignment = Alignment(horizontal="center")
+
+        for d in datos:
+
+            ws_ventas.append([
+                str(d[0]),
+                d[1],
+                d[2],
+                d[3],
+                float(d[4]),
+                float(d[5]),
+                float(d[6])
+            ])
+
+        # ======================================
+        # INGRESOS MENSUALES
+        # ======================================
+
+        ws_ingresos = wb.create_sheet("Ingresos Mensuales")
+
+        ws_ingresos.append(["Mes","Ingresos"])
+
+        for m,v in sorted(ingresos_mes.items()):
+            ws_ingresos.append([m,v])
+
+        grafico_ingresos = LineChart()
+        grafico_ingresos.title = "Crecimiento de Ingresos"
+
+        data = Reference(ws_ingresos, min_col=2, min_row=1, max_row=ws_ingresos.max_row)
+        cats = Reference(ws_ingresos, min_col=1, min_row=2, max_row=ws_ingresos.max_row)
+
+        grafico_ingresos.add_data(data, titles_from_data=True)
+        grafico_ingresos.set_categories(cats)
+
+        ws_ingresos.add_chart(grafico_ingresos, "D2")
+
+        # ======================================
+        # UTILIDAD MENSUAL
+        # ======================================
+
+        ws_utilidad = wb.create_sheet("Utilidad Mensual")
+
+        ws_utilidad.append(["Mes","Utilidad"])
+
+        for m,v in sorted(utilidad_mes.items()):
+            ws_utilidad.append([m,v])
+
+        # ======================================
+        # TOP CLIENTES
+        # ======================================
+
+        ws_clientes = wb.create_sheet("Top Clientes")
+
+        ws_clientes.append(["Cliente","Ingresos"])
+
+        for c,v in sorted(clientes.items(), key=lambda x: x[1], reverse=True):
+            ws_clientes.append([c,v])
+
+        # ======================================
+        # SERVICIOS MÁS VENDIDOS
+        # ======================================
+
+        ws_servicios = wb.create_sheet("Servicios Más Vendidos")
+
+        ws_servicios.append(["Servicio","Ingresos"])
+
+        for s,v in sorted(servicios.items(), key=lambda x: x[1], reverse=True):
+            ws_servicios.append([s,v])
+
+        # ======================================
+        # PROYECCIÓN FINANCIERA
+        # ======================================
+
+        ws_proyeccion = wb.create_sheet("Proyección Financiera")
+
+        ws_proyeccion.append(["Mes","Ingreso Proyectado"])
+
+        proyeccion = ingreso_mensual
+
+        for i in range(1,13):
+            proyeccion *= 1.05
+            ws_proyeccion.append([f"Mes {i}", round(proyeccion,2)])
+
+        # ======================================
+        # HEATMAP INGRESOS
+        # ======================================
+
+        ws_heatmap = wb.create_sheet("Heatmap Ingresos")
+
+        ws_heatmap.append(["Mes","Ingresos"])
+
+        for mes,valor in sorted(ingresos_mes.items()):
+            ws_heatmap.append([mes,valor])
+
+        regla = ColorScaleRule(
+            start_type="min",
+            start_color="F8696B",
+            mid_type="percentile",
+            mid_value=50,
+            mid_color="FFEB84",
+            end_type="max",
+            end_color="63BE7B"
+        )
+
+        ws_heatmap.conditional_formatting.add(
+            f"B2:B{ws_heatmap.max_row}",
+            regla
+        )
+
+        # ======================================
+        # RETENCION CLIENTES
+        # ======================================
+
+        ws_retencion = wb.create_sheet("Retención Clientes")
+
+        clientes_compras = {}
+
+        for d in datos:
+            cliente = d[2]
+            clientes_compras.setdefault(cliente,0)
+            clientes_compras[cliente] += 1
+
+        clientes_recurrentes = sum(1 for v in clientes_compras.values() if v > 1)
+        clientes_unicos = len(clientes_compras)
+
+        tasa_retencion = (
+            (clientes_recurrentes / clientes_unicos) * 100
+            if clientes_unicos else 0
+        )
+
+        ws_retencion.append(["Clientes Totales", clientes_unicos])
+        ws_retencion.append(["Clientes Recurrentes", clientes_recurrentes])
+        ws_retencion.append(["Tasa de Retención (%)", round(tasa_retencion,2)])
+
+        # ======================================
+        # DASHBOARD VISUAL
+        # ======================================
+
+        ws_dashboard = wb.create_sheet("Dashboard Visual")
+
+        ws_dashboard.append(["Concepto","Valor"])
+
+        datos_fin = [
+            ("Ingresos", total_ingresos),
+            ("Costos", total_costos),
+            ("Utilidad", total_utilidad)
+        ]
+
+        for d in datos_fin:
+            ws_dashboard.append(d)
+
+        grafico_fin = BarChart()
+        grafico_fin.title = "Ingresos vs Costos vs Utilidad"
+
+        data = Reference(ws_dashboard, min_col=2, min_row=1, max_row=4)
+        cats = Reference(ws_dashboard, min_col=1, min_row=2, max_row=4)
+
+        grafico_fin.add_data(data, titles_from_data=True)
+        grafico_fin.set_categories(cats)
+
+        ws_dashboard.add_chart(grafico_fin, "E2")
+
+        archivo = BytesIO()
+
+        wb.save(archivo)
+        archivo.seek(0)
+
+        return send_file(
+            archivo,
+            download_name=f"reporte_financiero_saas_{meses}_meses.xlsx",
+            as_attachment=True,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    except Exception:
+
+        logger.exception("Error generando reporte")
+
+        return "Error generando reporte", 500
+    
+
+# ======================================
 # RUTA CRON PARA ALERTAS
 # ======================================
 @app.route("/cron")
@@ -989,15 +1407,22 @@ def cron_public():
 # ======================================
 @app.route("/health")
 def health():
+
+    inicio = time.time()
+
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
+
         cursor.execute(adaptar_query("SELECT 1"))
+
+        latencia_db = round((time.time() - inicio) * 1000, 2)
 
         return {
             "status": "ok",
             "service": "saas-licencias",
             "database": "connected",
+            "db_latency_ms": latencia_db,
             "timestamp": int(time.time())
         }
 
@@ -1006,7 +1431,9 @@ def health():
 
         return {
             "status": "error",
-            "database": "disconnected"
+            "service": "saas-licencias",
+            "database": "disconnected",
+            "timestamp": int(time.time())
         }, 500
 
 
@@ -1023,8 +1450,8 @@ def index():
 
         with _dashboard_cache_lock:
             if (
-                _dashboard_cache["data"]
-                and time.time() - _dashboard_cache["timestamp"] < 30
+                _dashboard_cache["data"] is not None
+                and time.time() - _dashboard_cache["timestamp"] < DASHBOARD_CACHE_TTL
             ):
                 return render_template("dashboard/index.html", **_dashboard_cache["data"])
 
@@ -1098,12 +1525,18 @@ def index():
 
         usado_mb, disponible_mb = calcular_storage()
 
+        # ======================================
+        # RESUMEN FINANCIERO OPTIMIZADO (MEJORA PERFORMANCE DASHBOARD)
+        # ======================================
         cursor.execute(adaptar_query("""
-            SELECT 
-                COALESCE(SUM(precio_venta),0),
-                COALESCE(SUM(costo_base),0),
-                COALESCE(SUM(utilidad),0)
-            FROM ventas_contables
+            SELECT
+                COALESCE(SUM(vc.precio_venta),0),
+                COALESCE(SUM(vc.costo_base),0),
+                COALESCE(SUM(vc.utilidad),0),
+                COALESCE(SUM(pt.monto_usdt),0)
+            FROM ventas_contables vc
+            LEFT JOIN pagos_terceros pt
+                ON vc.id_contable = pt.id_contable
         """))
 
         finanzas = cursor.fetchone()
@@ -1111,13 +1544,7 @@ def index():
         total_ingresos = float(finanzas[0] or 0)
         total_costos = float(finanzas[1] or 0)
         total_utilidad = float(finanzas[2] or 0)
-
-        cursor.execute(adaptar_query("""
-            SELECT COALESCE(SUM(monto_usdt),0)
-            FROM pagos_terceros
-        """))
-
-        total_pagos = float(cursor.fetchone()[0] or 0)
+        total_pagos = float(finanzas[3] or 0)
 
         contexto = {
             "datos": datos_con_alerta,
@@ -2300,7 +2727,7 @@ def nuevo_servicio():
         cursor.execute(adaptar_query("""
             SELECT id_servicio
             FROM servicios
-            ORDER BY CAST(SUBSTR(id_servicio,6) AS INTEGER) DESC
+            ORDER BY id_servicio DESC
             LIMIT 1
         """))
 
