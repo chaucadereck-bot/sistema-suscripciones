@@ -1435,6 +1435,27 @@ def health():
             "database": "disconnected",
             "timestamp": int(time.time())
         }, 500
+        
+
+# ======================================
+# PING (KEEP ALIVE PARA RENDER FREE)
+# ======================================
+@app.route("/ping")
+def ping():
+    try:
+        return {
+            "status": "ok",
+            "service": "saas-licencias",
+            "message": "pong",
+            "timestamp": int(time.time())
+        }
+    except Exception:
+        logger.exception("Ping error")
+
+        return {
+            "status": "error",
+            "service": "saas-licencias"
+        }, 500
 
 
 # ======================================
